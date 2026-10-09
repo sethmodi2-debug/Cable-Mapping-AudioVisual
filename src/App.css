@@ -18,8 +18,10 @@
   background-color: var(--bg);
 }
 
+/* Dark theme: follows the system unless the page says data-theme="light",
+   and is forced on by data-theme="dark". */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #161616;
     --surface: #242424;
     --surface-2: #2e2e2e;
@@ -29,7 +31,25 @@
     --accent: #3b82f6;
     --danger: #ff6b6b;
     --canvas: #1b1b1b;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #161616;
+  --surface: #242424;
+  --surface-2: #2e2e2e;
+  --text: #ececec;
+  --muted: #a3a3a3;
+  --border: #3f3f3f;
+  --accent: #3b82f6;
+  --danger: #ff6b6b;
+  --canvas: #1b1b1b;
+  color-scheme: dark;
 }
 
 body {
@@ -314,10 +334,27 @@ button.danger {
   font-weight: 700;
 }
 
+/* Port dots stay small until the pointer is near them (over the port's
+   row) or a cable is being dragged, then grow so they're easy to hit. */
 .port .react-flow__handle {
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--surface);
+  width: 6px;
+  height: 6px;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--surface);
+  transition: width 0.12s, height 0.12s;
+}
+
+.port:hover .react-flow__handle,
+.react-flow__handle.connectingto,
+.react-flow__handle.connectingfrom {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+.react-flow__handle.connectingto {
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
 /* Cables */
@@ -427,6 +464,7 @@ button.danger {
 /* Inspector */
 
 .inspector {
+  color: var(--text);
   width: 280px;
   flex-shrink: 0;
   overflow-y: auto;
@@ -438,7 +476,47 @@ button.danger {
 
 .inspector h3,
 .inspector h4 {
-  margin: 4px 0;
+  margin: 0 0 2px;
+}
+
+/* Each part of the side panel sits in its own box, so editing the device
+   and adding to it read as separate jobs. */
+.panel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.panel-card.add-port {
+  background: var(--surface-2);
+  border: 1px dashed var(--accent);
+}
+
+.add-port h4 {
+  color: var(--accent);
+}
+
+.add-port-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-port-row label {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-port-row select {
+  width: 100%;
+}
+
+.add-port button.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .inspector label {

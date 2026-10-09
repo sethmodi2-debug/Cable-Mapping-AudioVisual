@@ -9,8 +9,8 @@ import {
   updateDevice,
   updatePort,
 } from "../model/edit";
-import { CONNECTORS, PROTOCOLS } from "../model/options";
-import { CABLE_TYPES } from "./cableColors";
+import { PROTOCOLS } from "../model/options";
+import { CABLE_TYPES, cableType } from "./cableColors";
 import type { Connector, Direction, Id, Protocol, Show } from "../model/types";
 
 export type Selection = { kind: "device"; id: Id } | { kind: "connection"; id: Id } | null;
@@ -51,41 +51,46 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
 
   return (
     <aside className="inspector">
-      <h3>Device</h3>
-      {device.model && <p className="hint">{device.model}</p>}
-      <label>
-        Name
-        <input value={device.name} onChange={(e) => onChange(updateDevice(show, deviceId, { name: e.target.value }))} />
-      </label>
-      <label>
-        Kind
-        <input value={device.kind} onChange={(e) => onChange(updateDevice(show, deviceId, { kind: e.target.value }))} />
-      </label>
-      <label>
-        Location
-        <input
-          value={device.location ?? ""}
-          placeholder="Stage left, FOH, Rack 2…"
-          onChange={(e) => onChange(updateDevice(show, deviceId, { location: e.target.value || undefined }))}
-        />
-      </label>
+      <section className="panel-card">
+        <h3>Device</h3>
+        {device.model && <p className="hint">{device.model}</p>}
+        <label>
+          Name
+          <input value={device.name} onChange={(e) => onChange(updateDevice(show, deviceId, { name: e.target.value }))} />
+        </label>
+        <label>
+          Kind
+          <input value={device.kind} onChange={(e) => onChange(updateDevice(show, deviceId, { kind: e.target.value }))} />
+        </label>
+        <label>
+          Location
+          <input
+            value={device.location ?? ""}
+            placeholder="Stage left, FOH, Rack 2…"
+            onChange={(e) => onChange(updateDevice(show, deviceId, { location: e.target.value || undefined }))}
+          />
+        </label>
+      </section>
 
-      <h4>Ports</h4>
-      <ul className="port-list">
-        {ports.map((p) => (
-          <li key={p.id}>
-            <input value={p.name} onChange={(e) => onChange(updatePort(show, p.id, { name: e.target.value }))} />
-            <span className="hint">
-              {p.direction} · {p.protocol ?? p.connector}
-            </span>
-            <button className="link" onClick={() => onChange(removePort(show, p.id))} aria-label={`Remove ${p.name}`}>
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
+      <section className="panel-card">
+        <h4>Ports ({ports.length})</h4>
+        <ul className="port-list">
+          {ports.map((p) => (
+            <li key={p.id}>
+              <input value={p.name} onChange={(e) => onChange(updatePort(show, p.id, { name: e.target.value }))} />
+              <span className="hint">
+                {DIRECTION_LABELS[p.direction]} · {p.protocol ?? cableType(p.connector).short}
+              </span>
+              <button className="link" onClick={() => onChange(removePort(show, p.id))} aria-label={`Remove ${p.name}`}>
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <form
-        className="row"
+        className="panel-card add-port"
         onSubmit={(e) => {
           e.preventDefault();
           if (!portName.trim()) return;
@@ -93,18 +98,34 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
           setPortName("");
         }}
       >
-        <input placeholder="New port" value={portName} onChange={(e) => setPortName(e.target.value)} />
-        <select value={direction} onChange={(e) => setDirection(e.target.value as Direction)}>
-          <option value="in">in</option>
-          <option value="out">out</option>
-          <option value="io">in/out</option>
-        </select>
-        <select value={connector} onChange={(e) => setConnector(e.target.value as Connector)}>
-          {CONNECTORS.map((c) => (
-            <option key={c}>{c}</option>
-          ))}
-        </select>
-        <button type="submit">Add</button>
+        <h4>+ Add a port</h4>
+        <label>
+          Port name
+          <input placeholder="Input 17, Aux 3, Dante…" value={portName} onChange={(e) => setPortName(e.target.value)} />
+        </label>
+        <div className="add-port-row">
+          <label>
+            Direction
+            <select value={direction} onChange={(e) => setDirection(e.target.value as Direction)}>
+              <option value="in">Input</option>
+              <option value="out">Output</option>
+              <option value="io">Network (in/out)</option>
+            </select>
+          </label>
+          <label>
+            Connector
+            <select value={connector} onChange={(e) => setConnector(e.target.value as Connector)}>
+              {CABLE_TYPES.map((t) => (
+                <option key={t.connector} value={t.connector}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button type="submit" className="primary" disabled={!portName.trim()}>
+          Add port
+        </button>
       </form>
 
       <button
@@ -119,6 +140,8 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
     </aside>
   );
 }
+
+const DIRECTION_LABELS: Record<Direction, string> = { in: "input", out: "output", io: "network" };
 
 function ConnectionInspector({ show, connectionId, onChange, onSelect }: { show: Show; connectionId: Id } & Omit<Props, "selection" | "show">) {
   const conn = show.connections.find((c) => c.id === connectionId)!;

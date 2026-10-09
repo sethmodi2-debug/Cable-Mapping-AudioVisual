@@ -57,7 +57,7 @@ function PortRow({ port, side, connected, onPickUp }: PortRowProps) {
         <Handle id={leftHandleId(port.id)} type="source" position={Position.Left} style={handleStyle} />
       )}
       <span className="port-name">{port.name}</span>
-      <span className="port-connector">{port.protocol ?? port.connector}</span>
+      <span className="port-connector">{port.protocol ?? cableType(port.connector).short}</span>
     </div>
   );
 }
