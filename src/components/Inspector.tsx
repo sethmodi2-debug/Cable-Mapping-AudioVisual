@@ -49,6 +49,7 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
   return (
     <aside className="inspector">
       <h3>Device</h3>
+      {device.model && <p className="hint">{device.model}</p>}
       <label>
         Name
         <input value={device.name} onChange={(e) => onChange(updateDevice(show, deviceId, { name: e.target.value }))} />

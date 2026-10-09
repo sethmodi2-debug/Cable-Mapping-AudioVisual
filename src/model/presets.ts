@@ -11,6 +11,8 @@ interface PortSpec {
 
 export interface Preset {
   kind: string;
+  manufacturer?: string;
+  model?: string;
   ports: PortSpec[];
 }
 
@@ -62,12 +64,22 @@ export const PRESETS: Preset[] = [
   { kind: "Laptop", ports: [{ name: "HDMI Out", direction: "out", connector: "HDMI", protocol: "HDMI" }] },
 ];
 
-// Adds a device built from a preset, named "<kind> <n>" and placed at position.
+export function presetLabel(preset: Preset): string {
+  return preset.model ? `${preset.manufacturer} ${preset.model}` : preset.kind;
+}
+
+// Adds a device built from a preset and places it at position. Products are
+// named after the model ("Qu-6D", then "Qu-6D 2"); generic presets after the
+// kind ("Mic 1", "Mic 2").
 export function addPreset(show: Show, preset: Preset, position: { x: number; y: number }): Show {
-  const n = show.devices.filter((d) => d.kind === preset.kind).length + 1;
-  const next = addDevice(show, { name: `${preset.kind} ${n}`, kind: preset.kind, inputs: 0, outputs: 0, connector: "XLR3" });
+  const base = preset.model ?? preset.kind;
+  const taken = new Set(show.devices.map((d) => d.name));
+  let name = preset.model ? base : `${base} 1`;
+  for (let n = 2; taken.has(name); n++) name = `${base} ${n}`;
+  const next = addDevice(show, { name, kind: preset.kind, inputs: 0, outputs: 0, connector: "XLR3" });
   const device = next.devices[next.devices.length - 1];
   device.position = position;
+  if (preset.model) device.model = presetLabel(preset);
   const ports: Port[] = preset.ports.flatMap((spec) => {
     const names = spec.count ? Array.from({ length: spec.count }, (_, i) => `${spec.name} ${i + 1}`) : [spec.name];
     return names.map((name) => ({

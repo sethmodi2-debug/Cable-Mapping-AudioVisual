@@ -1,8 +1,37 @@
 :root {
+  --bg: #f6f6f6;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --text: #1d1d1f;
+  --muted: #6b7280;
+  --border: #d1d5db;
+  --accent: #2563eb;
+  --danger: #b00020;
+  --canvas: #fafafa;
+
   font-family: Inter, system-ui, sans-serif;
   font-size: 15px;
-  color: #1d1d1f;
-  background-color: #f6f6f6;
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161616;
+    --surface: #242424;
+    --surface-2: #2e2e2e;
+    --text: #ececec;
+    --muted: #a3a3a3;
+    --border: #3f3f3f;
+    --accent: #3b82f6;
+    --danger: #ff6b6b;
+    --canvas: #1b1b1b;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
 }
 
 .container {
@@ -15,35 +44,18 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 24px;
-  background: #fff;
+  background: var(--surface);
 }
 
 th,
 td {
   text-align: left;
   padding: 6px 10px;
-  border-bottom: 1px solid #e2e2e2;
+  border-bottom: 1px solid var(--border);
 }
 
 .issues {
-  color: #b00020;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f0f0f0;
-    background-color: #1e1e1e;
-  }
-  table {
-    background: #2a2a2a;
-  }
-  th,
-  td {
-    border-bottom-color: #3a3a3a;
-  }
-  .issues {
-    color: #ff8a80;
-  }
+  color: var(--danger);
 }
 
 .toolbar,
@@ -61,8 +73,9 @@ td {
   min-width: 240px;
 }
 
-.path {
-  opacity: 0.6;
+.path,
+.hint {
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -71,18 +84,49 @@ select,
 button {
   font: inherit;
   padding: 4px 8px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 input[type="number"] {
   width: 4em;
 }
 
+input[type="checkbox"] {
+  padding: 0;
+}
+
 button.link {
   background: none;
   border: none;
-  color: #b00020;
-  cursor: pointer;
+  color: var(--danger);
 }
+
+button.danger {
+  margin-top: 12px;
+  color: #fff;
+  background: #b00020;
+  border: none;
+  padding: 6px 10px;
+}
+
+/* Map layout */
 
 .app-map {
   height: 100vh;
@@ -102,15 +146,21 @@ button.link {
 }
 
 .tabs button {
-  border: 1px solid #bbb;
+  border-radius: 0;
   background: transparent;
-  color: inherit;
-  cursor: pointer;
+}
+
+.tabs button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.tabs button:last-child {
+  border-radius: 0 4px 4px 0;
 }
 
 .tabs button.active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -124,10 +174,14 @@ button.link {
 .map-canvas {
   flex: 1;
   position: relative;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--canvas);
+}
+
+.map-canvas .react-flow {
+  --xy-background-color: var(--canvas);
 }
 
 .map-toolbar {
@@ -140,30 +194,38 @@ button.link {
   align-items: center;
 }
 
-.hint {
-  opacity: 0.6;
+.toggle {
+  display: flex;
+  gap: 4px;
+  align-items: center;
   font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
 }
 
+/* Device boxes */
+
 .device-node {
-  background: #fff;
-  color: #1d1d1f;
-  border: 2px solid #9ca3af;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
   border-radius: 8px;
   min-width: 200px;
   font-size: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .device-node.selected {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .device-header {
   padding: 6px 10px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f3f4f6;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
   border-radius: 6px 6px 0 0;
 }
 
@@ -173,7 +235,7 @@ button.link {
 }
 
 .device-meta {
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .device-ports {
@@ -188,6 +250,32 @@ button.link {
   flex-direction: column;
 }
 
+.port-col-right {
+  align-items: flex-end;
+}
+
+.port-group-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 12px;
+}
+
+.network-ports {
+  border-top: 1px dashed var(--border);
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.network-ports .port-group-label {
+  align-self: stretch;
+  text-align: right;
+}
+
 .port {
   position: relative;
   display: flex;
@@ -196,24 +284,134 @@ button.link {
   white-space: nowrap;
 }
 
+.network-ports .port {
+  align-self: stretch;
+  justify-content: flex-start;
+}
+
 .port-right {
   flex-direction: row-reverse;
 }
 
 .port-connector {
-  color: #9ca3af;
+  color: var(--muted);
   font-size: 10px;
 }
 
 .port.connected .port-name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .port .react-flow__handle {
   width: 10px;
   height: 10px;
-  background: #6b7280;
+  border: 2px solid var(--surface);
 }
+
+/* Cables */
+
+.cable-label {
+  position: absolute;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  padding: 3px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px var(--canvas);
+}
+
+.cable-label.selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.cable-label-detail {
+  font-weight: 500;
+  opacity: 0.85;
+  margin-left: 4px;
+}
+
+.exporting .flow-dot {
+  display: none;
+}
+
+.legend {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text);
+  max-width: 220px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.legend-swatch {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Add device picker */
+
+.picker {
+  position: relative;
+}
+
+.picker-panel {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  width: 320px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.picker-list {
+  overflow-y: auto;
+}
+
+.picker-group {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 8px 4px 2px;
+}
+
+.picker-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 5px 6px;
+}
+
+.picker-item:hover {
+  background: var(--surface-2);
+}
+
+/* Inspector */
 
 .inspector {
   width: 280px;
@@ -259,34 +457,4 @@ button.link {
 
 .port-list input {
   width: 110px;
-}
-
-button.danger {
-  margin-top: 12px;
-  color: #fff;
-  background: #b00020;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-@media (prefers-color-scheme: dark) {
-  .map-canvas {
-    background: #181818;
-    border-color: #333;
-  }
-  .device-node {
-    background: #262626;
-    color: #f0f0f0;
-  }
-  .device-header {
-    background: #303030;
-    border-bottom-color: #3a3a3a;
-  }
-}
-
-.network-ports {
-  border-top: 1px dashed #d1d5db;
-  padding: 4px 0;
 }

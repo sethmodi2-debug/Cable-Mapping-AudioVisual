@@ -6,21 +6,24 @@ import {
   MiniMap,
   ReactFlow,
   type Connection as FlowConnection,
-  type Edge,
   type EdgeChange,
   type NodeChange,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMemo, useState } from "react";
-import { connectPorts, moveDevice, disconnect, removeDevice } from "../model/edit";
-import { PRESETS, addPreset } from "../model/presets";
+import { useMemo, useRef, useState } from "react";
+import { connectPorts, disconnect, moveDevice, removeDevice } from "../model/edit";
+import { addPreset, type Preset } from "../model/presets";
 import type { Show } from "../model/types";
+import { AddDevicePicker } from "./AddDevicePicker";
+import { CableEdge, type CableEdgeType } from "./CableEdge";
+import { cableFamily, isBidirectional } from "./cableColors";
 import { DeviceNode, leftHandleId, portIdFromHandle, type DeviceNodeType } from "./DeviceNode";
 import { Inspector, type Selection } from "./Inspector";
-import { PROTOCOL_COLORS } from "./protocolColors";
+import { Legend } from "./Legend";
 
 const nodeTypes = { device: DeviceNode };
+const edgeTypes = { cable: CableEdge };
 
 interface Props {
   show: Show;
@@ -29,10 +32,14 @@ interface Props {
 
 export function MapView({ show, onChange }: Props) {
   const [selection, setSelection] = useState<Selection>(null);
-  const [flow, setFlow] = useState<ReactFlowInstance<DeviceNodeType, Edge> | null>(null);
+  const [flow, setFlow] = useState<ReactFlowInstance<DeviceNodeType, CableEdgeType> | null>(null);
   // React Flow measures each node after render; nodes are rebuilt from the
   // show on every change, so the sizes are kept here and passed back in.
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
+  const [animate, setAnimate] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const nodes: DeviceNodeType[] = useMemo(() => {
     const connected = new Set(show.connections.flatMap((c) => [c.fromPortId, c.toPortId]));
@@ -46,41 +53,38 @@ export function MapView({ show, onChange }: Props) {
     }));
   }, [show, selection, sizes]);
 
-  const edges: Edge[] = useMemo(() => {
+  const edges: CableEdgeType[] = useMemo(() => {
     const ports = new Map(show.ports.map((p) => [p.id, p]));
     const cables = new Map(show.cables.map((c) => [c.id, c]));
     return show.connections.flatMap((conn) => {
       const fromPort = ports.get(conn.fromPortId);
       const toPort = ports.get(conn.toPortId);
       if (!fromPort || !toPort) return [];
-      const source = fromPort.deviceId;
-      const target = toPort.deviceId;
       const cable = conn.cableId ? cables.get(conn.cableId) : undefined;
-      const color = PROTOCOL_COLORS[cable?.protocol ?? "Analog"];
-      const label = cable
-        ? `${cable.label}${conn.channel !== undefined && cable.channels > 1 ? ` · ch ${conn.channel}` : ""}${cable.lengthM ? ` · ${cable.lengthM} m` : ""}`
-        : "no cable";
-      const selected = selection?.kind === "connection" && selection.id === conn.id;
+      const color = cableFamily(cable?.connector ?? fromPort.connector).color;
+      const protocol = cable?.protocol ?? fromPort.protocol ?? "Analog";
       return [
         {
           id: conn.id,
-          source,
-          target,
-          sourceHandle: conn.fromPortId,
+          type: "cable",
+          source: fromPort.deviceId,
+          target: toPort.deviceId,
+          sourceHandle: fromPort.id,
           // A network port receiving a link uses its left dot, so lines read left to right.
           targetHandle: toPort.direction === "io" ? leftHandleId(toPort.id) : toPort.id,
-          type: "smoothstep",
-          label,
-          selected,
-          style: { stroke: color, strokeWidth: selected ? 4 : 2.5 },
-          markerEnd: { type: MarkerType.ArrowClosed, color },
-          labelStyle: { fontWeight: 600, fontSize: 12, fill: color },
-          labelBgPadding: [6, 3] as [number, number],
-          labelBgBorderRadius: 4,
+          selected: selection?.kind === "connection" && selection.id === conn.id,
+          markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
+          data: {
+            label: cable?.label ?? "no cable",
+            detail: cable && cable.channels > 1 && conn.channel !== undefined ? `ch ${conn.channel}` : undefined,
+            color,
+            bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
+            animate: animate && !exporting,
+          },
         },
       ];
     });
-  }, [show, selection]);
+  }, [show, selection, animate, exporting]);
 
   function onNodesChange(changes: NodeChange<DeviceNodeType>[]) {
     let next = show;
@@ -96,7 +100,7 @@ export function MapView({ show, onChange }: Props) {
     if (next !== show) onChange(next);
   }
 
-  function onEdgesChange(changes: EdgeChange<Edge>[]) {
+  function onEdgesChange(changes: EdgeChange<CableEdgeType>[]) {
     let next = show;
     for (const change of changes) {
       if (change.type === "remove") next = disconnect(next, change.id);
@@ -113,35 +117,56 @@ export function MapView({ show, onChange }: Props) {
     setSelection({ kind: "connection", id: next.connections[next.connections.length - 1].id });
   }
 
-  function addDeviceFromPreset(kind: string) {
-    const preset = PRESETS.find((p) => p.kind === kind);
-    if (!preset) return;
+  function addFromPreset(preset: Preset) {
     // Drop new devices near the middle of the view, stepped so they don't stack exactly.
-    const center = flow?.screenToFlowPosition({ x: window.innerWidth / 2 - 250, y: window.innerHeight / 2 - 150 }) ?? { x: 80, y: 80 };
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const screen = rect ? { x: rect.left + rect.width / 2 - 120, y: rect.top + rect.height / 2 - 100 } : { x: 300, y: 300 };
+    const center = flow?.screenToFlowPosition(screen) ?? { x: 80, y: 80 };
     const step = (show.devices.length % 6) * 30;
     const next = addPreset(show, preset, { x: center.x + step, y: center.y + step });
     onChange(next);
     setSelection({ kind: "device", id: next.devices[next.devices.length - 1].id });
   }
 
+  async function onExport() {
+    const viewport = canvasRef.current?.querySelector<HTMLElement>(".react-flow__viewport");
+    if (!viewport || !flow) return;
+    setExporting(true);
+    setExportError(null);
+    setSelection(null);
+    try {
+      // Let the map re-render without dots and selection before the snapshot.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const background = getComputedStyle(canvasRef.current!).backgroundColor;
+      // The PDF libraries are large, so they load only when first used.
+      const { exportShowPdf } = await import("../exportShow");
+      await exportShowPdf(show, viewport, flow.getNodes(), background);
+    } catch (e) {
+      setExportError(`PDF export failed: ${String(e)}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="map-layout">
-      <div className="map-canvas">
+      <div className={`map-canvas${exporting ? " exporting" : ""}`} ref={canvasRef}>
         <div className="map-toolbar">
-          <select value="" onChange={(e) => addDeviceFromPreset(e.target.value)} aria-label="Add device">
-            <option value="">+ Add device…</option>
-            {PRESETS.map((p) => (
-              <option key={p.kind} value={p.kind}>
-                {p.kind}
-              </option>
-            ))}
-          </select>
-          <span className="hint">Drag from a port dot to another port to run a cable.</span>
+          <AddDevicePicker onPick={addFromPreset} />
+          <label className="toggle">
+            <input type="checkbox" checked={animate} onChange={(e) => setAnimate(e.target.checked)} />
+            Show signal flow
+          </label>
+          <button onClick={onExport} disabled={exporting}>
+            {exporting ? "Exporting…" : "Export PDF"}
+          </button>
+          {exportError && <span className="issues">{exportError}</span>}
         </div>
-        <ReactFlow<DeviceNodeType, Edge>
+        <ReactFlow<DeviceNodeType, CableEdgeType>
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -149,13 +174,15 @@ export function MapView({ show, onChange }: Props) {
           onPaneClick={() => setSelection(null)}
           connectionMode={ConnectionMode.Loose}
           deleteKeyCode={["Delete", "Backspace"]}
+          colorMode="system"
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.2}
         >
           <Background gap={20} />
           <Controls />
-          <MiniMap pannable zoomable nodeColor="#9ca3af" />
+          <MiniMap pannable zoomable />
+          <Legend show={show} />
         </ReactFlow>
       </div>
       <Inspector show={show} selection={selection} onChange={onChange} onSelect={setSelection} />

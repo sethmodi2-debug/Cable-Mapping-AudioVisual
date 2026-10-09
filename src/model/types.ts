@@ -39,6 +39,7 @@ export interface Device {
   id: Id;
   name: string;
   kind: string; // e.g. "Mic", "DI", "Stage box", "Console", "Amp", "Projector"
+  model?: string; // manufacturer and model, e.g. "Allen & Heath Qu-6D"
   location?: string; // e.g. "Stage left", "FOH", "Rack 2"
   position?: { x: number; y: number }; // where the device sits on the map
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addCable, addConnection, addDevice, connectPorts, disconnect, removeCable, removeDevice, removePort } from "./edit";
+import { CATALOG } from "./catalog";
 import { PRESETS, addPreset } from "./presets";
 import { emptyShow, validate } from "./show";
 import { sampleShow } from "./sample";
@@ -99,5 +100,23 @@ describe("disconnect", () => {
     const show = disconnect(sampleShow, "x-4");
     expect(show.cables.map((c) => c.id)).not.toContain("c-slink");
     expect(show.cables.map((c) => c.id)).toContain("c-cat");
+  });
+});
+
+describe("catalog products", () => {
+  it("adds a product named after its model with its rear-panel ports", () => {
+    const qu6d = CATALOG.find((p) => p.model === "Qu-6D")!;
+    let show = addPreset(emptyShow("t"), qu6d, { x: 0, y: 0 });
+    show = addPreset(show, qu6d, { x: 0, y: 0 });
+    expect(show.devices.map((d) => d.name)).toEqual(["Qu-6D", "Qu-6D 2"]);
+    expect(show.devices[0].model).toBe("Allen & Heath Qu-6D");
+    const ports = show.ports.filter((p) => p.deviceId === show.devices[0].id);
+    expect(ports.filter((p) => p.direction === "in" && p.connector === "XLR3")).toHaveLength(24);
+    expect(ports.find((p) => p.protocol === "Dante")).toBeDefined();
+  });
+
+  it("has unique manufacturer and model pairs", () => {
+    const labels = CATALOG.map((p) => `${p.manufacturer} ${p.model}`);
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });
