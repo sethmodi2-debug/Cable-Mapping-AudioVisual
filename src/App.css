@@ -83,3 +83,210 @@ button.link {
   color: #b00020;
   cursor: pointer;
 }
+
+.app-map {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 0;
+  box-sizing: border-box;
+}
+
+.app-map .toolbar {
+  margin-bottom: 8px;
+}
+
+.tabs {
+  display: flex;
+  margin-left: 12px;
+}
+
+.tabs button {
+  border: 1px solid #bbb;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.map-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  gap: 12px;
+}
+
+.map-canvas {
+  flex: 1;
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.map-toolbar {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.hint {
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+.device-node {
+  background: #fff;
+  color: #1d1d1f;
+  border: 2px solid #9ca3af;
+  border-radius: 8px;
+  min-width: 200px;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.device-node.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.device-header {
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  border-radius: 6px 6px 0 0;
+}
+
+.device-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.device-meta {
+  color: #6b7280;
+}
+
+.device-ports {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.port-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.port {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  padding: 2px 12px;
+  white-space: nowrap;
+}
+
+.port-right {
+  flex-direction: row-reverse;
+}
+
+.port-connector {
+  color: #9ca3af;
+  font-size: 10px;
+}
+
+.port.connected .port-name {
+  font-weight: 600;
+}
+
+.port .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #6b7280;
+}
+
+.inspector {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 4px 4px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inspector h3,
+.inspector h4 {
+  margin: 4px 0;
+}
+
+.inspector label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.inspector .route {
+  font-weight: 600;
+  margin: 0;
+}
+
+.port-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.port-list li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.port-list input {
+  width: 110px;
+}
+
+button.danger {
+  margin-top: 12px;
+  color: #fff;
+  background: #b00020;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-canvas {
+    background: #181818;
+    border-color: #333;
+  }
+  .device-node {
+    background: #262626;
+    color: #f0f0f0;
+  }
+  .device-header {
+    background: #303030;
+    border-bottom-color: #3a3a3a;
+  }
+}
+
+.network-ports {
+  border-top: 1px dashed #d1d5db;
+  padding: 4px 0;
+}

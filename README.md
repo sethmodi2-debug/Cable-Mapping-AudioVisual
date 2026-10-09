@@ -4,7 +4,7 @@ Open source desktop app for documenting audio and video cable runs at live event
 
 ## Status
 
-Early. You can add devices, cables and network links, patch them together, and save or open shows as `.cablemap.json` files. The patch list and cable pull list are generated from the data model in `src/model/`.
+Early. The main view is a map: drag devices around, draw cables between ports, and click any device or cable to label and edit it. A Lists tab shows the same show as tables. Shows save and open as `.cablemap.json` files. The patch list and cable pull list are generated from the data model in `src/model/`.
 
 ## Data model
 

@@ -36,6 +36,12 @@ describe("validate", () => {
     expect(validate(show).map((i) => i.message)).toContain('"Input 1" is an input but is used as a source');
   });
 
+  it("flags two sources plugged into one input", () => {
+    const show = clone(sampleShow);
+    show.connections.push({ id: "x-two", fromPortId: "p-vox", toPortId: "p-box-1" });
+    expect(validate(show).map((i) => i.message)).toContain("Stage box Input 1 has 2 sources plugged in");
+  });
+
   it("flags missing references", () => {
     const show = clone(sampleShow);
     show.connections.push({ id: "x-ghost", fromPortId: "nope", toPortId: "p-box-1" });

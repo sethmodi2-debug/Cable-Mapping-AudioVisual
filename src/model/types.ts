@@ -40,6 +40,7 @@ export interface Device {
   name: string;
   kind: string; // e.g. "Mic", "DI", "Stage box", "Console", "Amp", "Projector"
   location?: string; // e.g. "Stage left", "FOH", "Rack 2"
+  position?: { x: number; y: number }; // where the device sits on the map
 }
 
 export interface Port {
@@ -48,6 +49,7 @@ export interface Port {
   name: string; // e.g. "Input 1", "Dante Primary", "SLink"
   direction: Direction;
   connector: Connector;
+  protocol?: Protocol; // set on network ports, e.g. a Dante or SLink port
 }
 
 export interface Cable {

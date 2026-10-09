@@ -35,6 +35,20 @@ export function validate(show: Show): Issue[] {
     }
   }
 
+  const sourcesPerInput = new Map<Id, number>();
+  for (const conn of show.connections) {
+    if (ports.get(conn.toPortId)?.direction === "in") {
+      sourcesPerInput.set(conn.toPortId, (sourcesPerInput.get(conn.toPortId) ?? 0) + 1);
+    }
+  }
+  for (const [portId, count] of sourcesPerInput) {
+    if (count > 1) {
+      const port = ports.get(portId)!;
+      const device = devices.get(port.deviceId);
+      issues.push({ message: `${device?.name ?? "?"} ${port.name} has ${count} sources plugged in` });
+    }
+  }
+
   const usedChannels = new Map<string, Id>();
   for (const conn of show.connections) {
     const from = ports.get(conn.fromPortId);
