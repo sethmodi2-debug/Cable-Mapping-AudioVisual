@@ -47,7 +47,6 @@ export function Inspector({ show, selection, onChange, onSelect }: Props) {
 function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; deviceId: Id } & Omit<Props, "selection" | "show">) {
   const device = show.devices.find((d) => d.id === deviceId)!;
   const ports = show.ports.filter((p) => p.deviceId === deviceId);
-  const networkPorts = ports.filter(isNetworkPort);
   const [portName, setPortName] = useState("");
   const [direction, setDirection] = useState<Direction>("in");
   const [connector, setConnector] = useState<Connector>("XLR3");
@@ -63,8 +62,12 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
           <input value={device.name} onChange={(e) => onChange(updateDevice(show, deviceId, { name: e.target.value }))} />
         </label>
         <label>
-          Kind
-          <input value={device.kind} onChange={(e) => onChange(updateDevice(show, deviceId, { kind: e.target.value }))} />
+          Device type
+          <input
+            value={device.kind}
+            placeholder="Console, Stage box, Mic, Projector…"
+            onChange={(e) => onChange(updateDevice(show, deviceId, { kind: e.target.value }))}
+          />
         </label>
         <label>
           Location
@@ -84,40 +87,48 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
         </label>
       </section>
 
-      {networkPorts.length > 0 && (
+      {ports.some(isNetworkPort) && (
+        // One address for the device: its network ports share it.
         <section className="panel-card">
-          <h4>IP addresses</h4>
-          {networkPorts.map((p) => (
-            <label key={p.id}>
-              {p.name}
-              <input
-                className="ip-input"
-                value={p.ip ?? ""}
-                placeholder="192.168.1.10"
-                inputMode="decimal"
-                onChange={(e) => onChange(updatePort(show, p.id, { ip: e.target.value.trim() || undefined }))}
-              />
-              {p.ip && !isValidIp(p.ip) && <span className="field-warning">Not a valid IPv4 address</span>}
-            </label>
-          ))}
+          <label>
+            IP address
+            <input
+              className="ip-input"
+              value={device.ip ?? ""}
+              placeholder="192.168.1.10"
+              inputMode="decimal"
+              onChange={(e) => onChange(updateDevice(show, deviceId, { ip: e.target.value.trim() || undefined }))}
+            />
+            {device.ip && !isValidIp(device.ip) && <span className="field-warning">Not a valid IPv4 address</span>}
+          </label>
         </section>
       )}
 
       <section className="panel-card">
         <h4>Ports ({ports.length})</h4>
-        <ul className="port-list">
-          {ports.map((p) => (
-            <li key={p.id}>
-              <input value={p.name} onChange={(e) => onChange(updatePort(show, p.id, { name: e.target.value }))} />
-              <span className="hint">
-                {DIRECTION_LABELS[p.direction]} · {p.protocol ?? cableType(p.connector).short}
-              </span>
-              <button className="link" onClick={() => onChange(removePort(show, p.id))} aria-label={`Remove ${p.name}`}>
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+        {ports.length === 0 && <p className="hint">No ports yet. Add some below.</p>}
+        {PORT_GROUPS.map(({ direction, label }) => {
+          const group = ports.filter((p) => p.direction === direction);
+          if (group.length === 0) return null;
+          return (
+            <div key={direction} className="port-group">
+              <div className="port-group-title">
+                {label} <span className="hint">{group.length}</span>
+              </div>
+              <ul className="port-list">
+                {group.map((p) => (
+                  <li key={p.id}>
+                    <input value={p.name} onChange={(e) => onChange(updatePort(show, p.id, { name: e.target.value }))} />
+                    <span className="hint">{p.protocol ?? cableType(p.connector).short}</span>
+                    <button className="link" onClick={() => onChange(removePort(show, p.id))} aria-label={`Remove ${p.name}`}>
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </section>
 
       <form
@@ -196,7 +207,11 @@ function isValidIp(ip: string): boolean {
   return parts.length === 4 && parts.every((n) => /^\d{1,3}$/.test(n) && Number(n) <= 255);
 }
 
-const DIRECTION_LABELS: Record<Direction, string> = { in: "input", out: "output", io: "network" };
+const PORT_GROUPS: { direction: Direction; label: string }[] = [
+  { direction: "in", label: "Inputs" },
+  { direction: "out", label: "Outputs" },
+  { direction: "io", label: "Network" },
+];
 
 function ConnectionInspector({ show, connectionId, onChange, onSelect }: { show: Show; connectionId: Id } & Omit<Props, "selection" | "show">) {
   const conn = show.connections.find((c) => c.id === connectionId)!;
