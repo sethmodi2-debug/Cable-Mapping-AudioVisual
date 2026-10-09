@@ -1,44 +1,36 @@
 import type { Connector, Protocol } from "../model/types";
 
-// One colour per cable family, so a map reads at a glance: every Cat cable is
-// green whatever it carries, every XLR is blue, and so on.
-export interface CableFamily {
+// Each cable type has its own colour, so a map reads at a glance. The type
+// is picked when a cable is drawn and can be changed in the side panel.
+export interface CableType {
+  connector: Connector;
   name: string;
   color: string;
 }
 
-const FAMILIES = {
-  xlr: { name: "XLR", color: "#3b82f6" },
-  jack: { name: "Jack (TRS/TS)", color: "#a855f7" },
-  cat: { name: "Cat5e/6 (RJ45, etherCON)", color: "#22c55e" },
-  speakon: { name: "speakON", color: "#ef4444" },
-  bnc: { name: "BNC / SDI", color: "#eab308" },
-  hdmi: { name: "HDMI / DisplayPort", color: "#ec4899" },
-  fiber: { name: "Fiber", color: "#f97316" },
-  other: { name: "Other", color: "#9ca3af" },
-} satisfies Record<string, CableFamily>;
+export const CABLE_TYPES: CableType[] = [
+  { connector: "XLR3", name: "XLR", color: "#3b82f6" },
+  { connector: "XLR5", name: "XLR 5-pin", color: "#06b6d4" },
+  { connector: "TRS", name: "TRS jack", color: "#a855f7" },
+  { connector: "TS", name: "TS jack", color: "#d946ef" },
+  { connector: "etherCON", name: "Cat6 (etherCON)", color: "#22c55e" },
+  { connector: "RJ45", name: "Cat6 (RJ45)", color: "#84cc16" },
+  { connector: "speakON", name: "speakON", color: "#ef4444" },
+  { connector: "BNC", name: "BNC / SDI", color: "#eab308" },
+  { connector: "HDMI", name: "HDMI", color: "#ec4899" },
+  { connector: "DisplayPort", name: "DisplayPort", color: "#14b8a6" },
+  { connector: "Fiber", name: "Fiber", color: "#f97316" },
+  { connector: "Other", name: "Other", color: "#9ca3af" },
+];
 
-const BY_CONNECTOR: Record<Connector, CableFamily> = {
-  XLR3: FAMILIES.xlr,
-  XLR5: FAMILIES.xlr,
-  TRS: FAMILIES.jack,
-  TS: FAMILIES.jack,
-  RJ45: FAMILIES.cat,
-  etherCON: FAMILIES.cat,
-  speakON: FAMILIES.speakon,
-  BNC: FAMILIES.bnc,
-  HDMI: FAMILIES.hdmi,
-  DisplayPort: FAMILIES.hdmi,
-  Fiber: FAMILIES.fiber,
-  Other: FAMILIES.other,
-};
+const BY_CONNECTOR = new Map(CABLE_TYPES.map((t) => [t.connector, t]));
 
-export function cableFamily(connector: Connector): CableFamily {
-  return BY_CONNECTOR[connector];
+export function cableType(connector: Connector): CableType {
+  return BY_CONNECTOR.get(connector) ?? CABLE_TYPES[CABLE_TYPES.length - 1];
 }
 
 // Protocols that run both ways over one cable, drawn with dots in both directions.
-const BIDIRECTIONAL: Protocol[] = ["Dante", "AES50", "SLink", "gigaACE", "dSNAKE", "MADI", "NDI"];
+const BIDIRECTIONAL: Protocol[] = ["Dante", "AES50", "SLink", "gigaACE", "dSNAKE", "MADI", "AVB", "Optocore", "TWINLANe", "NDI"];
 
 export function isBidirectional(protocol: Protocol): boolean {
   return BIDIRECTIONAL.includes(protocol);

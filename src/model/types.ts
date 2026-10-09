@@ -31,6 +31,9 @@ export type Protocol =
   | "gigaACE"
   | "dSNAKE"
   | "MADI"
+  | "AVB"
+  | "Optocore"
+  | "TWINLANe"
   | "SDI"
   | "HDMI"
   | "NDI";

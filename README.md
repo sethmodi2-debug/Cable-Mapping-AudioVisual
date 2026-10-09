@@ -4,7 +4,7 @@ Open source desktop app for documenting audio and video cable runs at live event
 
 ## Status
 
-Early. The main view is a map: add devices from generic types or a product list (Allen & Heath, Behringer, Midas, Shure, Radial), drag them around, draw cables between ports, and click any device or cable to label and edit it. Cables are coloured by type and can animate signal flow. Export PDF produces the map plus patch list, cable schedule and pull list. A Lists tab shows the same show as tables. Shows save and open as `.cablemap.json` files. The patch list and cable pull list are generated from the data model in `src/model/`.
+Early. The main view is a map: add devices from generic types or a product list (Allen & Heath, DiGiCo, Avid, Yamaha, Behringer, Midas, plus mics and DIs), drag them around, and draw cables between ports, picking each cable's type as you go. Grab a used input to move or unplug its cable. Click any device or cable to label and edit it. Cables are coloured by type and can animate signal flow. Export PDF produces the map plus patch list, cable schedule and pull list. A Lists tab shows the same show as tables. Shows save and open as `.cablemap.json` files. The patch list and cable pull list are generated from the data model in `src/model/`.
 
 ## Data model
 
