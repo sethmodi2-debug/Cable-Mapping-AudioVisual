@@ -11,12 +11,12 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { connectPorts, disconnect, moveDevice, reconnect, removeDevice, updateDevice } from "../model/edit";
 import { addPreset, type Preset } from "../model/presets";
 import type { Connector, Direction, Id, Show } from "../model/types";
 import { AddDevicePicker } from "./AddDevicePicker";
-import { CableEdge, type CableEdgeType } from "./CableEdge";
+import { CableEdge, GRID, type CableEdgeType } from "./CableEdge";
 import { cableType, isBidirectional } from "./cableColors";
 import { CableTypeMenu } from "./CableTypeMenu";
 import { DeviceNode, leftHandleId, portIdFromHandle, type DeviceNodeType } from "./DeviceNode";
@@ -24,6 +24,51 @@ import { Inspector, type Selection } from "./Inspector";
 import { useColorMode } from "../theme";
 
 const nodeTypes = { device: DeviceNode };
+
+// Places tried along a cable for its label, from the middle outwards.
+const LABEL_SPOTS = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.12, 0.88];
+
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+function sameSpots(a: Record<string, { x: number; y: number } | null>, b: Record<string, { x: number; y: number } | null>): boolean {
+  const keys = Object.keys(b);
+  if (keys.length !== Object.keys(a).length) return false;
+  return keys.every((k) => {
+    const p = a[k];
+    const q = b[k];
+    if (!p || !q) return p === q;
+    return Math.abs(p.x - q.x) < 0.5 && Math.abs(p.y - q.y) < 0.5;
+  });
+}
+
+// An on/off setting remembered in this browser between sessions.
+function useStoredFlag(key: string): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return localStorage.getItem(key) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const set = (value: boolean) => {
+    setOn(value);
+    try {
+      localStorage.setItem(key, value ? "1" : "0");
+    } catch {
+      // Storage can be unavailable (private windows); the setting just isn't remembered.
+    }
+  };
+  return [on, set];
+}
 const edgeTypes = { cable: CableEdge };
 
 interface Props {
@@ -51,6 +96,9 @@ export function MapView({ show, onChange }: Props) {
   const [pickedUp, setPickedUp] = useState<Id | null>(null);
   const pickedUpRef = useRef<Id | null>(null);
   const droppedPickUp = useRef(false);
+  const [snapDevices, setSnapDevices] = useStoredFlag("snapDevices");
+  const [snapCables, setSnapCables] = useStoredFlag("snapCables");
+  const [labelSpots, setLabelSpots] = useState<Record<Id, { x: number; y: number } | null>>({});
 
   const nodes: DeviceNodeType[] = useMemo(() => {
     const connected = new Set(show.connections.flatMap((c) => [c.fromPortId, c.toPortId]));
@@ -88,6 +136,8 @@ export function MapView({ show, onChange }: Props) {
           data: {
             // The cable just says what it is. Its ID and signal are in the side panel and lists.
             label: type.short,
+            labelAt: labelSpots[conn.id],
+            snap: snapCables,
             color: type.color,
             bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
             animate: animate && !exporting,
@@ -95,7 +145,46 @@ export function MapView({ show, onChange }: Props) {
         },
       ];
     });
-  }, [show, selection, animate, exporting, pickedUp]);
+  }, [show, selection, animate, exporting, pickedUp, labelSpots, snapCables]);
+
+  // After the map draws, place each cable's label on its cable where it
+  // clears every device and every label placed before it, or hide it.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const root = canvasRef.current;
+      if (!root) return;
+      const pad = 4;
+      const taken: Rect[] = nodes.map((n) => ({
+        x: n.position.x - pad,
+        y: n.position.y - pad,
+        w: (n.measured?.width ?? 0) + 2 * pad,
+        h: (n.measured?.height ?? 0) + 2 * pad,
+      }));
+      const next: Record<Id, { x: number; y: number } | null> = {};
+      // The selected cable gets first pick, so its label always shows if it can.
+      const order = [...edges].sort((a, b) => Number(!!b.selected) - Number(!!a.selected));
+      for (const edge of order) {
+        if (edge.hidden) continue;
+        const path = root.querySelector<SVGPathElement>(`.react-flow__edge[data-id="${CSS.escape(edge.id)}"] path.react-flow__edge-path`);
+        const label = root.querySelector<HTMLElement>(`.cable-label[data-edge="${CSS.escape(edge.id)}"]`);
+        if (!path || !label) continue;
+        const w = label.offsetWidth + pad;
+        const h = label.offsetHeight + pad;
+        const length = path.getTotalLength();
+        next[edge.id] = null;
+        for (const t of LABEL_SPOTS) {
+          const point = path.getPointAtLength(length * t);
+          const rect = { x: point.x - w / 2, y: point.y - h / 2, w, h };
+          if (taken.some((r) => overlaps(r, rect))) continue;
+          taken.push(rect);
+          next[edge.id] = { x: point.x, y: point.y };
+          break;
+        }
+      }
+      setLabelSpots((prev) => (sameSpots(prev, next) ? prev : next));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [nodes, edges]);
 
   // Lifting a cable off an input starts a new drag from the cable's source
   // port, so React Flow draws it following the pointer like a loose cable end.
@@ -242,6 +331,14 @@ export function MapView({ show, onChange }: Props) {
             <input type="checkbox" checked={animate} onChange={(e) => setAnimate(e.target.checked)} />
             Show signal flow
           </label>
+          <label className="toggle">
+            <input type="checkbox" checked={snapDevices} onChange={(e) => setSnapDevices(e.target.checked)} />
+            Snap devices to grid
+          </label>
+          <label className="toggle">
+            <input type="checkbox" checked={snapCables} onChange={(e) => setSnapCables(e.target.checked)} />
+            Snap cables to grid
+          </label>
           <button onClick={onExport} disabled={exporting}>
             {exporting ? "Exporting…" : "Export PDF"}
           </button>
@@ -271,8 +368,10 @@ export function MapView({ show, onChange }: Props) {
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.2}
+          snapToGrid={snapDevices}
+          snapGrid={[GRID, GRID]}
         >
-          <Background gap={20} />
+          <Background gap={GRID} />
           <Controls />
           <MiniMap pannable zoomable />
         </ReactFlow>
