@@ -37,6 +37,7 @@ const LANE = 24; // where the channels beside a device run
 const STUB = 20; // straight run out of a port before the first bend
 const BEND = 40; // a bend costs as much as this many pixels of cable
 const SPREAD = 7; // gap between cables sharing a channel
+const MIN_STUB = 20; // spreading never leaves less straight cable than this at a port
 
 const STEP: Record<Side, Point> = {
   left: { x: -1, y: 0 },
@@ -216,6 +217,10 @@ function routeOne(boxes: Box[], request: RouteRequest, options: RouteOptions): P
       if (ni < 0 || nj < 0 || ni >= nx || nj >= ny || !isOpen(ni, nj)) continue;
       const there = at(ni, nj);
       if (!passable(here, there)) continue;
+      // Never double back towards the port the cable just left, or come
+      // into the last stretch from the port's own side.
+      if (i === si && j === sj && cost === 0 && di === -STEP[from.side].x && dj === -STEP[from.side].y) continue;
+      if (ni === ei && nj === ej && di === STEP[to.side].x && dj === STEP[to.side].y) continue;
       const nd = dj === 0 ? 0 : 1;
       const next = cost + Math.abs(there.x - here.x) + Math.abs(there.y - here.y) + (nd === d ? 0 : BEND);
       const nkey = stateKey(ni, nj, nd);
@@ -284,8 +289,27 @@ function spread(routes: Record<string, Point[] | null>) {
       const ids = new Set(cluster.map((r) => r.id));
       if (ids.size > 1) {
         cluster.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+        const offsets = cluster.map((_, n) => (n - (cluster.length - 1) / 2) * SPREAD);
+        // Slide the whole group sideways if that's what it takes to keep a
+        // straight run out of every port, so no cable bends right at its socket.
+        let low = -Infinity;
+        let high = Infinity;
         cluster.forEach((run, n) => {
-          const offset = (n - (cluster.length - 1) / 2) * SPREAD;
+          const points = routes[run.id]!;
+          const axis = run.vertical ? "x" : "y";
+          const limit = (port: Point, bend: Point) => {
+            const dir = Math.sign(bend[axis] - port[axis]) || 1;
+            // dir * (bend + offsets[n] + shift - port) >= MIN_STUB
+            const bound = (MIN_STUB - dir * (bend[axis] - port[axis])) / dir - offsets[n];
+            if (dir > 0) low = Math.max(low, bound);
+            else high = Math.min(high, bound);
+          };
+          if (run.index === 1) limit(points[0], points[1]);
+          if (run.index + 2 === points.length - 1) limit(points[points.length - 1], points[run.index + 1]);
+        });
+        const shift = low > high ? low : Math.min(Math.max(0, low), high);
+        cluster.forEach((run, n) => {
+          const offset = offsets[n] + shift;
           const points = routes[run.id]!;
           const axis = run.vertical ? "x" : "y";
           points[run.index] = { ...points[run.index], [axis]: points[run.index][axis] + offset };

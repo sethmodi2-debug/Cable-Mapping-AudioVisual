@@ -71,3 +71,26 @@ describe("cable routing", () => {
     expect(routeMiddle([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }])).toEqual({ x: 100, y: 0 });
   });
 });
+
+describe("cable ends", () => {
+  it("leave every port with a straight run, even when spread apart", () => {
+    // Two cables from neighbouring ports heading the same way share a lane.
+    const box: Box = { x: 0, y: 0, w: 100, h: 100 };
+    const far: Box = { x: 400, y: 300, w: 100, h: 100 };
+    const routes = routeCables(
+      [box, far],
+      [
+        { id: "a", from: { x: 100, y: 40, side: "right" }, to: { x: 400, y: 340, side: "left" } },
+        { id: "b", from: { x: 100, y: 60, side: "right" }, to: { x: 400, y: 360, side: "left" } },
+        { id: "c", from: { x: 100, y: 80, side: "right" }, to: { x: 400, y: 380, side: "left" } },
+      ],
+    );
+    for (const route of Object.values(routes)) {
+      const first = Math.abs(route![1].x - route![0].x) + Math.abs(route![1].y - route![0].y);
+      const n = route!.length;
+      const last = Math.abs(route![n - 1].x - route![n - 2].x) + Math.abs(route![n - 1].y - route![n - 2].y);
+      expect(first).toBeGreaterThanOrEqual(20);
+      expect(last).toBeGreaterThanOrEqual(20);
+    }
+  });
+});
