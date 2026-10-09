@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCable, addConnection, addDevice, connectPorts, disconnect, removeCable, removeDevice, removePort } from "./edit";
+import { addCable, addConnection, addDevice, connectPorts, disconnect, reconnect, removeCable, removeDevice, removePort } from "./edit";
 import { CATALOG } from "./catalog";
 import { PRESETS, addPreset } from "./presets";
 import { emptyShow, validate } from "./show";
@@ -120,3 +120,49 @@ describe("catalog products", () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 });
+
+describe("plugging and unplugging", () => {
+  it("uses the chosen cable type for the label and connector", () => {
+    const show = connectPorts(sampleShow, "p-desk-dante", "p-rec-dante", "Fiber");
+    expect(show.cables[show.cables.length - 1]).toMatchObject({ connector: "Fiber", label: "DANTE-01", protocol: "Dante" });
+    const analog = connectPorts(emptyShowWithMicAndBox(), "mic", "in1", "TRS");
+    expect(analog.cables[0]).toMatchObject({ connector: "TRS", label: "JACK-01" });
+  });
+
+  it("replaces what was plugged into an input", () => {
+    const show = connectPorts(sampleShow, "p-vox", "p-box-1");
+    const intoInput1 = show.connections.filter((c) => c.toPortId === "p-box-1");
+    expect(intoInput1).toHaveLength(1);
+    expect(intoInput1[0].fromPortId).toBe("p-vox");
+    expect(show.cables.map((c) => c.id)).not.toContain("c-1");
+    expect(validate(show)).toEqual([]);
+  });
+
+  it("moves a cable end to another port and keeps the cable", () => {
+    let show = removeDevice(sampleShow, "d-di");
+    show = reconnect(show, "x-1", "p-kick", "p-box-3");
+    expect(show.connections.find((c) => c.id === "x-1")).toMatchObject({ fromPortId: "p-kick", toPortId: "p-box-3", cableId: "c-1" });
+    expect(validate(show)).toEqual([]);
+  });
+
+  it("moving onto an occupied input unplugs what was there", () => {
+    const show = reconnect(sampleShow, "x-1", "p-box-2", "p-kick");
+    expect(show.connections.filter((c) => c.toPortId === "p-box-2").map((c) => c.id)).toEqual(["x-1"]);
+    expect(validate(show)).toEqual([]);
+  });
+});
+
+function emptyShowWithMicAndBox() {
+  const show = emptyShow("t");
+  return {
+    ...show,
+    devices: [
+      { id: "m", name: "Mic", kind: "Mic" },
+      { id: "b", name: "Box", kind: "Stage box" },
+    ],
+    ports: [
+      { id: "mic", deviceId: "m", name: "Out", direction: "out" as const, connector: "XLR3" as const },
+      { id: "in1", deviceId: "b", name: "Input 1", direction: "in" as const, connector: "XLR3" as const },
+    ],
+  };
+}

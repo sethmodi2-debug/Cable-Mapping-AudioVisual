@@ -9,6 +9,9 @@
   --danger: #b00020;
   --canvas: #fafafa;
 
+  /* Lets native controls (dropdown lists, scrollbars, date and number
+     fields) follow the theme instead of staying light. */
+  color-scheme: light dark;
   font-family: Inter, system-ui, sans-serif;
   font-size: 15px;
   color: var(--text);
@@ -102,6 +105,15 @@ button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+option {
+  color: var(--text);
+  background: var(--surface);
+}
+
+input::placeholder {
+  color: var(--muted);
 }
 
 input[type="number"] {
@@ -337,30 +349,6 @@ button.danger {
   display: none;
 }
 
-.legend {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--text);
-  max-width: 220px;
-}
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 2px 0;
-}
-
-.legend-swatch {
-  width: 18px;
-  height: 4px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
 /* Add device picker */
 
 .picker {
@@ -385,6 +373,31 @@ button.danger {
 
 .picker-list {
   overflow-y: auto;
+}
+
+.picker-category {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  text-align: left;
+  padding: 6px 4px;
+}
+
+.picker-category .hint {
+  margin-left: auto;
+}
+
+.picker-category .chevron {
+  width: 12px;
+  color: var(--muted);
+}
+
+.picker-section + .picker-section {
+  border-top: 1px solid var(--border);
 }
 
 .picker-group {
@@ -457,4 +470,68 @@ button.danger {
 
 .port-list input {
   width: 110px;
+}
+
+/* Cable type menu shown when a cable is drawn */
+
+.cable-menu {
+  position: absolute;
+  z-index: 10;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.cable-menu-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 6px 4px;
+}
+
+.cable-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+}
+
+.cable-menu-item:hover,
+.cable-menu-item.suggested {
+  background: var(--surface-2);
+}
+
+.cable-menu-item.suggested {
+  font-weight: 700;
+}
+
+.cable-swatch {
+  width: 22px;
+  height: 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.cable-menu-cancel {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+/* The grab area at each end of a cable, for moving or unplugging it */
+.react-flow__edgeupdater {
+  cursor: grab;
 }

@@ -5,5 +5,5 @@ export const CONNECTORS: Connector[] = [
 ];
 
 export const PROTOCOLS: Protocol[] = [
-  "Analog", "AES3", "Dante", "AES50", "SLink", "gigaACE", "dSNAKE", "MADI", "SDI", "HDMI", "NDI",
+  "Analog", "AES3", "Dante", "AES50", "SLink", "gigaACE", "dSNAKE", "MADI", "AVB", "Optocore", "TWINLANe", "SDI", "HDMI", "NDI",
 ];

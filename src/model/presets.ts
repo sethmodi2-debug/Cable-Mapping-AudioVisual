@@ -1,7 +1,7 @@
 import { addDevice, newId } from "./edit";
 import type { Connector, Direction, Port, Protocol, Show } from "./types";
 
-interface PortSpec {
+export interface PortSpec {
   name: string;
   direction: Direction;
   connector: Connector;
@@ -9,8 +9,21 @@ interface PortSpec {
   count?: number; // expands "Input" into "Input 1".."Input n"
 }
 
+// Picker sections, in display order.
+export const CATEGORIES = [
+  "Generic",
+  "Consoles & surfaces",
+  "Stage boxes & I/O",
+  "Engines & mix racks",
+  "Dynamic mics",
+  "Condenser mics",
+  "DI boxes",
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+
 export interface Preset {
   kind: string;
+  category?: Category; // defaults to "Generic"
   manufacturer?: string;
   model?: string;
   ports: PortSpec[];

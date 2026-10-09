@@ -14,7 +14,7 @@ const DURATION_S = 2.4;
 
 // A cable on the map: a coloured line, a small label pill, and optional dots
 // that travel along it in the direction the signal flows.
-export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected, markerEnd }: EdgeProps<CableEdgeType>) {
+export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps<CableEdgeType>) {
   const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 10 });
   if (!data) return null;
   const { color, animate, bidirectional } = data;
@@ -34,7 +34,7 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
 
   return (
     <>
-      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: color, strokeWidth: selected ? 4 : 2.5, opacity: selected ? 1 : 0.85 }} />
+      <BaseEdge id={id} path={path} style={{ stroke: color, strokeWidth: selected ? 4 : 2.5, opacity: selected ? 1 : 0.85 }} />
       {animate && (
         <g>
           {dots(false)}

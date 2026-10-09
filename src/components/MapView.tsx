@@ -2,25 +2,25 @@ import {
   Background,
   ConnectionMode,
   Controls,
-  MarkerType,
   MiniMap,
   ReactFlow,
   type Connection as FlowConnection,
+  type Edge,
   type EdgeChange,
   type NodeChange,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useMemo, useRef, useState } from "react";
-import { connectPorts, disconnect, moveDevice, removeDevice } from "../model/edit";
+import { connectPorts, disconnect, moveDevice, reconnect, removeDevice } from "../model/edit";
 import { addPreset, type Preset } from "../model/presets";
-import type { Show } from "../model/types";
+import type { Connector, Id, Show } from "../model/types";
 import { AddDevicePicker } from "./AddDevicePicker";
 import { CableEdge, type CableEdgeType } from "./CableEdge";
-import { cableFamily, isBidirectional } from "./cableColors";
+import { cableType, isBidirectional } from "./cableColors";
+import { CableTypeMenu } from "./CableTypeMenu";
 import { DeviceNode, leftHandleId, portIdFromHandle, type DeviceNodeType } from "./DeviceNode";
 import { Inspector, type Selection } from "./Inspector";
-import { Legend } from "./Legend";
 
 const nodeTypes = { device: DeviceNode };
 const edgeTypes = { cable: CableEdge };
@@ -40,6 +40,15 @@ export function MapView({ show, onChange }: Props) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  // A cable that has been drawn but whose type hasn't been picked yet.
+  const [pending, setPending] = useState<{ a: Id; b: Id; x: number; y: number; suggested: Connector } | null>(null);
+  const pointer = useRef({ x: 0, y: 0 });
+  const reconnected = useRef(false);
+  // A connection lifted off an input, waiting to be dropped somewhere. Kept
+  // in a ref too, because the drag starts before React re-renders.
+  const [pickedUp, setPickedUp] = useState<Id | null>(null);
+  const pickedUpRef = useRef<Id | null>(null);
+  const droppedPickUp = useRef(false);
 
   const nodes: DeviceNodeType[] = useMemo(() => {
     const connected = new Set(show.connections.flatMap((c) => [c.fromPortId, c.toPortId]));
@@ -47,7 +56,7 @@ export function MapView({ show, onChange }: Props) {
       id: device.id,
       type: "device",
       position: device.position ?? { x: 40 + (i % 4) * 280, y: 40 + Math.floor(i / 4) * 260 },
-      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected },
+      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp },
       selected: selection?.kind === "device" && selection.id === device.id,
       measured: sizes[device.id],
     }));
@@ -61,7 +70,7 @@ export function MapView({ show, onChange }: Props) {
       const toPort = ports.get(conn.toPortId);
       if (!fromPort || !toPort) return [];
       const cable = conn.cableId ? cables.get(conn.cableId) : undefined;
-      const color = cableFamily(cable?.connector ?? fromPort.connector).color;
+      const color = cableType(cable?.connector ?? fromPort.connector).color;
       const protocol = cable?.protocol ?? fromPort.protocol ?? "Analog";
       return [
         {
@@ -73,7 +82,7 @@ export function MapView({ show, onChange }: Props) {
           // A network port receiving a link uses its left dot, so lines read left to right.
           targetHandle: toPort.direction === "io" ? leftHandleId(toPort.id) : toPort.id,
           selected: selection?.kind === "connection" && selection.id === conn.id,
-          markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
+          hidden: conn.id === pickedUp,
           data: {
             label: cable?.label ?? "no cable",
             detail: cable && cable.channels > 1 && conn.channel !== undefined ? `ch ${conn.channel}` : undefined,
@@ -84,7 +93,21 @@ export function MapView({ show, onChange }: Props) {
         },
       ];
     });
-  }, [show, selection, animate, exporting]);
+  }, [show, selection, animate, exporting, pickedUp]);
+
+  // Lifting a cable off an input starts a new drag from the cable's source
+  // port, so React Flow draws it following the pointer like a loose cable end.
+  function pickUp(portId: Id, clientX: number, clientY: number) {
+    const conn = show.connections.find((c) => c.toPortId === portId);
+    const from = conn && show.ports.find((p) => p.id === conn.fromPortId);
+    const handle =
+      from && canvasRef.current?.querySelector<HTMLElement>(`.react-flow__handle[data-nodeid="${from.deviceId}"][data-handleid="${from.id}"]`);
+    if (!conn || !handle) return;
+    droppedPickUp.current = false;
+    pickedUpRef.current = conn.id;
+    setPickedUp(conn.id);
+    handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, clientX, clientY }));
+  }
 
   function onNodesChange(changes: NodeChange<DeviceNodeType>[]) {
     let next = show;
@@ -109,12 +132,59 @@ export function MapView({ show, onChange }: Props) {
     if (next !== show) onChange(next);
   }
 
+  // Drawing a cable asks for its type at the drop point before creating it.
   function onConnect(params: FlowConnection) {
     if (!params.sourceHandle || !params.targetHandle) return;
-    const next = connectPorts(show, portIdFromHandle(params.sourceHandle), portIdFromHandle(params.targetHandle));
+    const a = portIdFromHandle(params.sourceHandle);
+    const b = portIdFromHandle(params.targetHandle);
+    const lifted = pickedUpRef.current;
+    if (lifted) {
+      // A lifted cable keeps its type and label when it lands on a new port.
+      droppedPickUp.current = true;
+      onChange(reconnect(show, lifted, a, b));
+      setSelection({ kind: "connection", id: lifted });
+      return;
+    }
+    const ports = show.ports.filter((p) => p.id === a || p.id === b);
+    if (ports.length !== 2) return;
+    const source = ports.find((p) => p.direction !== "in") ?? ports[0];
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = Math.min(pointer.current.x - rect.left, rect.width - 200);
+    const y = Math.min(pointer.current.y - rect.top, rect.height - 380);
+    setPending({ a, b, x: Math.max(8, x), y: Math.max(8, y), suggested: source.connector });
+  }
+
+  function finishConnect(connector: Connector) {
+    if (!pending) return;
+    const next = connectPorts(show, pending.a, pending.b, connector);
+    setPending(null);
     if (next === show) return;
     onChange(next);
     setSelection({ kind: "connection", id: next.connections[next.connections.length - 1].id });
+  }
+
+  function onConnectEnd() {
+    const lifted = pickedUpRef.current;
+    if (!lifted) return;
+    if (!droppedPickUp.current) onChange(disconnect(show, lifted));
+    pickedUpRef.current = null;
+    setPickedUp(null);
+  }
+
+  // Dragging the end of a cable moves it to another port; dropping it on
+  // empty space unplugs it.
+  function onReconnect(edge: Edge, params: FlowConnection) {
+    if (!params.sourceHandle || !params.targetHandle) return;
+    reconnected.current = true;
+    onChange(reconnect(show, edge.id, portIdFromHandle(params.sourceHandle), portIdFromHandle(params.targetHandle)));
+  }
+
+  function onReconnectEnd(_: unknown, edge: Edge) {
+    if (!reconnected.current) {
+      onChange(disconnect(show, edge.id));
+      if (selection?.kind === "connection" && selection.id === edge.id) setSelection(null);
+    }
+    reconnected.current = false;
   }
 
   function addFromPreset(preset: Preset) {
@@ -150,7 +220,12 @@ export function MapView({ show, onChange }: Props) {
 
   return (
     <div className="map-layout">
-      <div className={`map-canvas${exporting ? " exporting" : ""}`} ref={canvasRef}>
+      <div
+        className={`map-canvas${exporting ? " exporting" : ""}`}
+        ref={canvasRef}
+        onPointerMove={(e) => (pointer.current = { x: e.clientX, y: e.clientY })}
+        onPointerUp={(e) => (pointer.current = { x: e.clientX, y: e.clientY })}
+      >
         <div className="map-toolbar">
           <AddDevicePicker onPick={addFromPreset} />
           <label className="toggle">
@@ -162,6 +237,9 @@ export function MapView({ show, onChange }: Props) {
           </button>
           {exportError && <span className="issues">{exportError}</span>}
         </div>
+        {pending && (
+          <CableTypeMenu x={pending.x} y={pending.y} suggested={pending.suggested} onPick={finishConnect} onCancel={() => setPending(null)} />
+        )}
         <ReactFlow<DeviceNodeType, CableEdgeType>
           nodes={nodes}
           edges={edges}
@@ -170,6 +248,11 @@ export function MapView({ show, onChange }: Props) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onConnectEnd={onConnectEnd}
+          onReconnect={onReconnect}
+          onReconnectStart={() => (reconnected.current = false)}
+          onReconnectEnd={onReconnectEnd}
+          reconnectRadius={16}
           onInit={setFlow}
           onPaneClick={() => setSelection(null)}
           connectionMode={ConnectionMode.Loose}
@@ -182,7 +265,6 @@ export function MapView({ show, onChange }: Props) {
           <Background gap={20} />
           <Controls />
           <MiniMap pannable zoomable />
-          <Legend show={show} />
         </ReactFlow>
       </div>
       <Inspector show={show} selection={selection} onChange={onChange} onSelect={setSelection} />

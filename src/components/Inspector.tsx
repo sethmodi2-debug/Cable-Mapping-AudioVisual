@@ -10,6 +10,7 @@ import {
   updatePort,
 } from "../model/edit";
 import { CONNECTORS, PROTOCOLS } from "../model/options";
+import { CABLE_TYPES } from "./cableColors";
 import type { Connector, Direction, Id, Protocol, Show } from "../model/types";
 
 export type Selection = { kind: "device"; id: Id } | { kind: "connection"; id: Id } | null;
@@ -33,8 +34,10 @@ export function Inspector({ show, selection, onChange, onSelect }: Props) {
   return (
     <aside className="inspector">
       <h3>Nothing selected</h3>
-      <p className="hint">Click a device or a cable to edit its name, label and details.</p>
-      <p className="hint">Select something and press Delete to remove it.</p>
+      <p className="hint">Drag from one port's dot to another to run a cable, then pick its type.</p>
+      <p className="hint">To move a cable, grab the dot of the input it's plugged into and drop it on another port. Let go over empty space to unplug it.</p>
+      <p className="hint">Plugging into an input that's already in use replaces what was there.</p>
+      <p className="hint">Click a device or a cable to edit it. Press Delete to remove what's selected.</p>
     </aside>
   );
 }
@@ -150,10 +153,12 @@ function ConnectionInspector({ show, connectionId, onChange, onSelect }: { show:
             <input value={cable.label} onChange={(e) => onChange(updateCable(show, cable.id, { label: e.target.value }))} />
           </label>
           <label>
-            Connector
+            Cable type
             <select value={cable.connector} onChange={(e) => onChange(updateCable(show, cable.id, { connector: e.target.value as Connector }))}>
-              {CONNECTORS.map((c) => (
-                <option key={c}>{c}</option>
+              {CABLE_TYPES.map((t) => (
+                <option key={t.connector} value={t.connector}>
+                  {t.name}
+                </option>
               ))}
             </select>
           </label>

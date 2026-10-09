@@ -105,6 +105,9 @@ const LINK_CHANNELS: Partial<Record<Protocol, number>> = {
   gigaACE: 128,
   dSNAKE: 40,
   MADI: 64,
+  AVB: 64,
+  Optocore: 512,
+  TWINLANe: 400,
   AES3: 2,
 };
 
@@ -136,20 +139,36 @@ export function nextLabel(show: Show, prefix: string): string {
   }
 }
 
+// Puts two ports in signal order: the source first, the destination second.
+function orderPorts(a: Port, b: Port): [Port, Port] {
+  return a.direction === "in" || b.direction === "out" ? [b, a] : [a, b];
+}
+
+// An input takes one source, so plugging into an occupied input unplugs
+// whatever was there first. Outputs and network ports can feed several.
+function clearInput(show: Show, port: Port, keepConnectionId?: Id): Show {
+  if (port.direction !== "in") return show;
+  return show.connections
+    .filter((c) => c.toPortId === port.id && c.id !== keepConnectionId)
+    .reduce((next, c) => disconnect(next, c.id), show);
+}
+
 // Connects two ports, as when a cable is drawn on the map. Accepts the ports
-// in either order and puts the source first. A new cable is created and
-// labeled from the source port's connector and protocol.
-export function connectPorts(show: Show, aPortId: Id, bPortId: Id): Show {
+// in either order and puts the source first. A new cable of the given type
+// (or the source port's connector) is created and labeled to match.
+export function connectPorts(show: Show, aPortId: Id, bPortId: Id, connector?: Connector): Show {
   const a = show.ports.find((p) => p.id === aPortId);
   const b = show.ports.find((p) => p.id === bPortId);
   if (!a || !b || a.id === b.id) return show;
-  const [from, to] = a.direction === "in" || b.direction === "out" ? [b, a] : [a, b];
+  const [from, to] = orderPorts(a, b);
+  const base = clearInput(show, to);
   const protocol = from.protocol ?? to.protocol ?? "Analog";
   const channels = LINK_CHANNELS[protocol] ?? 1;
+  const type = connector ?? from.connector;
   const cable: Cable = {
     id: newId(),
-    label: nextLabel(show, labelPrefix(from.connector, protocol)),
-    connector: from.connector,
+    label: nextLabel(base, labelPrefix(type, protocol)),
+    connector: type,
     protocol,
     channels,
   };
@@ -160,7 +179,17 @@ export function connectPorts(show: Show, aPortId: Id, bPortId: Id): Show {
     cableId: cable.id,
     channel: channels > 1 ? 1 : undefined,
   };
-  return { ...show, cables: [...show.cables, cable], connections: [...show.connections, connection] };
+  return { ...base, cables: [...base.cables, cable], connections: [...base.connections, connection] };
+}
+
+// Moves an existing connection to a new pair of ports, keeping its cable, as
+// when the end of a cable is dragged to a different port on the map.
+export function reconnect(show: Show, connectionId: Id, aPortId: Id, bPortId: Id): Show {
+  const a = show.ports.find((p) => p.id === aPortId);
+  const b = show.ports.find((p) => p.id === bPortId);
+  if (!a || !b || a.id === b.id || !show.connections.some((c) => c.id === connectionId)) return show;
+  const [from, to] = orderPorts(a, b);
+  return updateConnection(clearInput(show, to, connectionId), connectionId, { fromPortId: from.id, toPortId: to.id });
 }
 
 // Removes a connection drawn on the map, and its cable too when nothing else
