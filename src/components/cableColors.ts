@@ -5,22 +5,23 @@ import type { Connector, Protocol } from "../model/types";
 export interface CableType {
   connector: Connector;
   name: string;
+  short: string; // printed on the cable itself
   color: string;
 }
 
 export const CABLE_TYPES: CableType[] = [
-  { connector: "XLR3", name: "XLR", color: "#3b82f6" },
-  { connector: "XLR5", name: "XLR 5-pin", color: "#06b6d4" },
-  { connector: "TRS", name: "TRS jack", color: "#a855f7" },
-  { connector: "TS", name: "TS jack", color: "#d946ef" },
-  { connector: "etherCON", name: "Cat6 (etherCON)", color: "#22c55e" },
-  { connector: "RJ45", name: "Cat6 (RJ45)", color: "#84cc16" },
-  { connector: "speakON", name: "speakON", color: "#ef4444" },
-  { connector: "BNC", name: "BNC / SDI", color: "#eab308" },
-  { connector: "HDMI", name: "HDMI", color: "#ec4899" },
-  { connector: "DisplayPort", name: "DisplayPort", color: "#14b8a6" },
-  { connector: "Fiber", name: "Fiber", color: "#f97316" },
-  { connector: "Other", name: "Other", color: "#9ca3af" },
+  { connector: "XLR3", name: "XLR", short: "XLR", color: "#3b82f6" },
+  { connector: "XLR5", name: "XLR 5-pin", short: "XLR 5-pin", color: "#06b6d4" },
+  { connector: "TRS", name: "TRS jack", short: "TRS", color: "#a855f7" },
+  { connector: "TS", name: "TS jack", short: "TS", color: "#d946ef" },
+  { connector: "etherCON", name: "Cat6 (etherCON)", short: "Cat6", color: "#22c55e" },
+  { connector: "RJ45", name: "Cat6 (RJ45)", short: "Cat6", color: "#84cc16" },
+  { connector: "speakON", name: "speakON", short: "speakON", color: "#ef4444" },
+  { connector: "BNC", name: "BNC / SDI", short: "SDI", color: "#eab308" },
+  { connector: "HDMI", name: "HDMI", short: "HDMI", color: "#ec4899" },
+  { connector: "DisplayPort", name: "DisplayPort", short: "DP", color: "#14b8a6" },
+  { connector: "Fiber", name: "Fiber", short: "Fiber", color: "#f97316" },
+  { connector: "Other", name: "Other", short: "Other", color: "#9ca3af" },
 ];
 
 const BY_CONNECTOR = new Map(CABLE_TYPES.map((t) => [t.connector, t]));

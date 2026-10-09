@@ -21,6 +21,7 @@ import { cableType, isBidirectional } from "./cableColors";
 import { CableTypeMenu } from "./CableTypeMenu";
 import { DeviceNode, leftHandleId, portIdFromHandle, type DeviceNodeType } from "./DeviceNode";
 import { Inspector, type Selection } from "./Inspector";
+import { useColorMode } from "../theme";
 
 const nodeTypes = { device: DeviceNode };
 const edgeTypes = { cable: CableEdge };
@@ -32,6 +33,7 @@ interface Props {
 
 export function MapView({ show, onChange }: Props) {
   const [selection, setSelection] = useState<Selection>(null);
+  const colorMode = useColorMode();
   const [flow, setFlow] = useState<ReactFlowInstance<DeviceNodeType, CableEdgeType> | null>(null);
   // React Flow measures each node after render; nodes are rebuilt from the
   // show on every change, so the sizes are kept here and passed back in.
@@ -70,8 +72,9 @@ export function MapView({ show, onChange }: Props) {
       const toPort = ports.get(conn.toPortId);
       if (!fromPort || !toPort) return [];
       const cable = conn.cableId ? cables.get(conn.cableId) : undefined;
-      const color = cableType(cable?.connector ?? fromPort.connector).color;
+      const type = cableType(cable?.connector ?? fromPort.connector);
       const protocol = cable?.protocol ?? fromPort.protocol ?? "Analog";
+      const channel = cable && cable.channels > 1 && conn.channel !== undefined ? `ch ${conn.channel}` : undefined;
       return [
         {
           id: conn.id,
@@ -84,9 +87,10 @@ export function MapView({ show, onChange }: Props) {
           selected: selection?.kind === "connection" && selection.id === conn.id,
           hidden: conn.id === pickedUp,
           data: {
-            label: cable?.label ?? "no cable",
-            detail: cable && cable.channels > 1 && conn.channel !== undefined ? `ch ${conn.channel}` : undefined,
-            color,
+            // The cable says what it is; its ID label lives in the side panel and lists.
+            label: type.short,
+            detail: [protocol !== "Analog" && protocol !== type.short ? protocol : undefined, channel].filter(Boolean).join(" · ") || undefined,
+            color: type.color,
             bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
             animate: animate && !exporting,
           },
@@ -257,7 +261,7 @@ export function MapView({ show, onChange }: Props) {
           onPaneClick={() => setSelection(null)}
           connectionMode={ConnectionMode.Loose}
           deleteKeyCode={["Delete", "Backspace"]}
-          colorMode="system"
+          colorMode={colorMode}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.2}
