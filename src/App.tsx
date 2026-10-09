@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CablesPanel } from "./components/CablesPanel";
 import { ConnectionsPanel } from "./components/ConnectionsPanel";
 import { DevicesPanel } from "./components/DevicesPanel";
+import { MapView } from "./components/MapView";
 import { openShowFile, saveShowFile } from "./file";
 import { sampleShow } from "./model/sample";
 import { emptyShow, pullList, validate } from "./model/show";
@@ -13,6 +14,7 @@ function App() {
   const [path, setPath] = useState<string | undefined>();
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"map" | "lists">("map");
 
   const issues = validate(show);
 
@@ -53,7 +55,7 @@ function App() {
     });
 
   return (
-    <main className="container">
+    <main className={tab === "map" ? "app app-map" : "app container"}>
       <header className="toolbar">
         <input
           className="show-name"
@@ -66,6 +68,14 @@ function App() {
         <button onClick={onOpen}>Open…</button>
         <button onClick={() => onSave(false)}>Save</button>
         <button onClick={() => onSave(true)}>Save as…</button>
+        <div className="tabs">
+          <button className={tab === "map" ? "active" : ""} onClick={() => setTab("map")}>
+            Map
+          </button>
+          <button className={tab === "lists" ? "active" : ""} onClick={() => setTab("lists")}>
+            Lists
+          </button>
+        </div>
         <span className="path">
           {path ?? "Not saved"}
           {dirty ? " •" : ""}
@@ -81,33 +91,39 @@ function App() {
         </ul>
       )}
 
-      <DevicesPanel show={show} onChange={edit} />
-      <CablesPanel show={show} onChange={edit} />
-      <ConnectionsPanel show={show} onChange={edit} />
+      {tab === "map" ? (
+        <MapView show={show} onChange={edit} />
+      ) : (
+        <div className="lists">
+        <DevicesPanel show={show} onChange={edit} />
+        <CablesPanel show={show} onChange={edit} />
+        <ConnectionsPanel show={show} onChange={edit} />
 
-      <section>
-        <h2>Cable pull list</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Connector</th>
-              <th>Length (m)</th>
-              <th>Channels</th>
-              <th>Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pullList(show).map((row) => (
-              <tr key={`${row.connector}-${row.lengthM}-${row.channels}`}>
-                <td>{row.connector}</td>
-                <td>{row.lengthM ?? ""}</td>
-                <td>{row.channels}</td>
-                <td>{row.count}</td>
+        <section>
+          <h2>Cable pull list</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Connector</th>
+                <th>Length (m)</th>
+                <th>Channels</th>
+                <th>Qty</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {pullList(show).map((row) => (
+                <tr key={`${row.connector}-${row.lengthM}-${row.channels}`}>
+                  <td>{row.connector}</td>
+                  <td>{row.lengthM ?? ""}</td>
+                  <td>{row.channels}</td>
+                  <td>{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        </div>
+      )}
     </main>
   );
 }
