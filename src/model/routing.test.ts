@@ -94,3 +94,26 @@ describe("cable ends", () => {
     }
   });
 });
+
+describe("close devices", () => {
+  const a: Box = { x: 0, y: 0, w: 100, h: 100 };
+  const b: Box = { x: 112, y: 30, w: 100, h: 100 };
+
+  it("step once halfway across a narrow gap", () => {
+    const routes = routeCables([a, b], [{ id: "c", from: { x: 100, y: 50, side: "right" }, to: { x: 112, y: 70, side: "left" } }]);
+    expect(routes.c).toEqual([
+      { x: 100, y: 50 },
+      { x: 106, y: 50 },
+      { x: 106, y: 70 },
+      { x: 112, y: 70 },
+    ]);
+  });
+
+  it("go straight when the ports line up", () => {
+    const routes = routeCables([a, b], [{ id: "c", from: { x: 100, y: 50.3, side: "right" }, to: { x: 112, y: 50, side: "left" } }]);
+    expect(routes.c).toEqual([
+      { x: 100, y: 50.3 },
+      { x: 112, y: 50.3 },
+    ]);
+  });
+});

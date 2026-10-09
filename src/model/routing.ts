@@ -131,8 +131,64 @@ function simplify(points: Point[]): Point[] {
   return out;
 }
 
+// When the two ports face each other with nothing in between, the cable
+// goes straight across, or steps once halfway, however close the devices are.
+function directRoute(boxes: Box[], from: CableEnd, to: CableEnd, options: RouteOptions): Point[] | null {
+  const facing =
+    (from.side === "right" && to.side === "left" && to.x > from.x) || (from.side === "left" && to.side === "right" && to.x < from.x);
+  if (!facing) return null;
+  const a = { x: from.x, y: from.y };
+  const b = { x: to.x, y: to.y };
+  // Close devices leave a narrow gap, so the cable may pass nearer to them.
+  const clearance = Math.min(CLEARANCE, Math.max(0, Math.abs(to.x - from.x) / 2 - 3));
+  const blocks = boxes.map((box) => inflate(box, clearance));
+  // The runs out of the ports start on a device's edge, so they only have to
+  // stay out of the devices themselves; the step between keeps its distance.
+  const clear = (points: Point[]) =>
+    points.slice(1).every((q, k) => {
+      const ends = k === 0 || k === points.length - 2;
+      return !(ends ? boxes : blocks).some((box) => crosses(points[k], q, box));
+    });
+  if (Math.abs(from.y - to.y) < 0.5) {
+    const straight = [a, { x: b.x, y: a.y }];
+    return clear(straight) ? straight : null;
+  }
+  // Step halfway if that's clear, otherwise at the nearest clear spot
+  // between the two ports.
+  let mid = (from.x + to.x) / 2;
+  if (options.grid && Math.abs(to.x - from.x) > 2 * options.grid) mid = Math.round(mid / options.grid) * options.grid;
+  const lo = Math.min(from.x, to.x) + 4;
+  const hi = Math.max(from.x, to.x) - 4;
+  for (let k = 0; mid - k >= lo || mid + k <= hi; k += 2) {
+    for (const x of k === 0 ? [mid] : [mid - k, mid + k]) {
+      if (x < lo || x > hi) continue;
+      const step = [a, { x, y: a.y }, { x, y: b.y }, b];
+      if (clear(step)) return step;
+    }
+  }
+  return null;
+}
+
+// Lines the search snaps to are rounded, so tidy the ends back onto the
+// ports' own lines; otherwise a hair's difference shows up as a kink.
+function alignEnds(points: Point[]): Point[] {
+  const n = points.length;
+  if (n < 3) return points;
+  const out = points.map((p) => ({ ...p }));
+  const fix = (end: number, next: number) => {
+    const horizontal = Math.abs(out[next].y - out[end].y) < 0.5;
+    if (horizontal) out[next].y = out[end].y;
+    else if (Math.abs(out[next].x - out[end].x) < 0.5) out[next].x = out[end].x;
+  };
+  fix(0, 1);
+  fix(n - 1, n - 2);
+  return out;
+}
+
 function routeOne(boxes: Box[], request: RouteRequest, options: RouteOptions): Point[] | null {
   const { from, to } = request;
+  const direct = directRoute(boxes, from, to, options);
+  if (direct) return direct;
   const blocks = boxes.map((b) => inflate(b, CLEARANCE));
   const start = { x: from.x + STEP[from.side].x * STUB, y: from.y + STEP[from.side].y * STUB };
   const end = { x: to.x + STEP[to.side].x * STUB, y: to.y + STEP[to.side].y * STUB };
@@ -240,7 +296,7 @@ function routeOne(boxes: Box[], request: RouteRequest, options: RouteOptions): P
     path.push(at(i, (cell - i) / nx));
   }
   path.reverse();
-  return simplify([{ x: from.x, y: from.y }, ...path, { x: to.x, y: to.y }]);
+  return simplify(alignEnds([{ x: from.x, y: from.y }, ...path, { x: to.x, y: to.y }]));
 }
 
 interface Run {
@@ -299,8 +355,10 @@ function spread(routes: Record<string, Point[] | null>) {
           const axis = run.vertical ? "x" : "y";
           const limit = (port: Point, bend: Point) => {
             const dir = Math.sign(bend[axis] - port[axis]) || 1;
-            // dir * (bend + offsets[n] + shift - port) >= MIN_STUB
-            const bound = (MIN_STUB - dir * (bend[axis] - port[axis])) / dir - offsets[n];
+            // A cable squeezed between close devices keeps the run it has.
+            const keep = Math.min(MIN_STUB, Math.abs(bend[axis] - port[axis]));
+            // dir * (bend + offsets[n] + shift - port) >= keep
+            const bound = (keep - dir * (bend[axis] - port[axis])) / dir - offsets[n];
             if (dir > 0) low = Math.max(low, bound);
             else high = Math.min(high, bound);
           };
@@ -348,10 +406,12 @@ export function routePath(points: Point[], radius: number): string {
     }
     const prev = points[k - 1];
     const r = Math.min(radius, Math.hypot(p.x - prev.x, p.y - prev.y) / 2, Math.hypot(next.x - p.x, next.y - p.y) / 2);
-    const inX = p.x - Math.sign(p.x - prev.x) * r;
-    const inY = p.y - Math.sign(p.y - prev.y) * r;
-    const outX = p.x + Math.sign(next.x - p.x) * r;
-    const outY = p.y + Math.sign(next.y - p.y) * r;
+    // Ignore sub-pixel wobble, which would otherwise bend the corner the wrong way.
+    const sign = (v: number) => (Math.abs(v) < 0.5 ? 0 : Math.sign(v));
+    const inX = p.x - sign(p.x - prev.x) * r;
+    const inY = p.y - sign(p.y - prev.y) * r;
+    const outX = p.x + sign(next.x - p.x) * r;
+    const outY = p.y + sign(next.y - p.y) * r;
     d += ` L ${inX} ${inY} Q ${p.x} ${p.y} ${outX} ${outY}`;
   }
   return d;
