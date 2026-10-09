@@ -85,6 +85,14 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
             ))}
           </select>
         </label>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={!!device.flipped}
+            onChange={(e) => onChange(updateDevice(show, deviceId, { flipped: e.target.checked || undefined }))}
+          />
+          Inputs on the right, outputs on the left
+        </label>
       </section>
 
       {ports.some(isNetworkPort) && (

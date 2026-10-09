@@ -51,6 +51,7 @@ export interface Device {
   system?: SystemType; // worked out from the ports when not set
   collapsed?: Direction[]; // port sections folded away on the map
   ip?: string; // networked devices, e.g. "192.168.1.20"
+  flipped?: boolean; // inputs on the right and outputs on the left
 }
 
 export interface Port {
