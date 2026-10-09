@@ -33,6 +33,15 @@ export function addPort(show: Show, port: Omit<Port, "id">): Show {
   return { ...show, ports: [...show.ports, { ...port, id: newId() }] };
 }
 
+// The next quantity names in a numbered run: with Input 1 and 2 already
+// there, ("Input", 3) gives Input 3, 4, 5.
+export function numberedNames(existing: string[], base: string, quantity: number): string[] {
+  const prefix = base + " ";
+  const used = existing.filter((name) => name.startsWith(prefix)).map((name) => Number(name.slice(prefix.length)));
+  let n = Math.max(0, ...used.filter(Number.isInteger));
+  return Array.from({ length: quantity }, () => `${base} ${++n}`);
+}
+
 export function addCable(show: Show, cable: Omit<Cable, "id">): Show {
   return { ...show, cables: [...show.cables, { ...cable, id: newId() }] };
 }
