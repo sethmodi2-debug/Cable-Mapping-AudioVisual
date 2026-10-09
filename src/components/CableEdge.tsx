@@ -2,20 +2,38 @@ import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type Edge, type EdgePro
 
 export type CableEdgeData = {
   label: string;
+  // Where the label goes, worked out so it clears devices and other labels.
+  // Undefined puts it at the middle of the cable; null hides it.
+  labelAt?: { x: number; y: number } | null;
+  snap: boolean; // bend the cable on a grid line
   color: string;
   bidirectional: boolean;
   animate: boolean;
 };
 export type CableEdgeType = Edge<CableEdgeData, "cable">;
 
+export const GRID = 20;
 const DOTS = 3;
 const DURATION_S = 2.4;
 
 // A cable on the map: a coloured line, a small label pill, and optional dots
 // that travel along it in the direction the signal flows.
 export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps<CableEdgeType>) {
-  const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 10 });
+  const snapTo = (v: number) => Math.round(v / GRID) * GRID;
+  const [path, midX, midY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    borderRadius: data?.snap ? 0 : 10,
+    centerX: data?.snap ? snapTo((sourceX + targetX) / 2) : undefined,
+    centerY: data?.snap ? snapTo((sourceY + targetY) / 2) : undefined,
+  });
   if (!data) return null;
+  const labelX = data.labelAt?.x ?? midX;
+  const labelY = data.labelAt?.y ?? midY;
   const { color, animate, bidirectional } = data;
 
   const dots = (reverse: boolean) =>
@@ -42,7 +60,8 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
       )}
       <EdgeLabelRenderer>
         <div
-          className={`cable-label${selected ? " selected" : ""}`}
+          data-edge={id}
+          className={`cable-label${selected ? " selected" : ""}${data.labelAt === null ? " hidden" : ""}`}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color }}
         >
           {data.label}

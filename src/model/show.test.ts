@@ -91,3 +91,10 @@ describe("serialize and parse", () => {
     expect(() => parse('{"formatVersion": 1, "devices": []}')).toThrow(/ports/);
   });
 });
+
+describe("dLive sample show", () => {
+  it("is valid", async () => {
+    const { dliveShow } = await import("./dliveSample");
+    expect(validate(dliveShow)).toEqual([]);
+  });
+});

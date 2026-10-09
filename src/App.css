@@ -434,6 +434,11 @@ button.danger {
   box-shadow: 0 0 0 2px var(--canvas);
 }
 
+/* No room for the label (devices close together, or labels would overlap) */
+.cable-label.hidden {
+  visibility: hidden;
+}
+
 .cable-label.selected {
   box-shadow: 0 0 0 2px var(--accent);
 }

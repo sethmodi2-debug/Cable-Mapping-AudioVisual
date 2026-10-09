@@ -5,13 +5,13 @@ import { DevicesPanel } from "./components/DevicesPanel";
 import { MapView } from "./components/MapView";
 import { openShowFile, saveShowFile } from "./file";
 import { useHistory, useUndoKeys } from "./history";
-import { sampleShow } from "./model/sample";
+import { dliveShow } from "./model/dliveSample";
 import { emptyShow, pullList, validate } from "./model/show";
 import type { Show } from "./model/types";
 import "./App.css";
 
 function App() {
-  const history = useHistory<Show>(sampleShow);
+  const history = useHistory<Show>(dliveShow);
   const show = history.value;
   useUndoKeys(history.undo, history.redo);
   const [path, setPath] = useState<string | undefined>();
@@ -68,7 +68,7 @@ function App() {
           aria-label="Show name"
         />
         <button onClick={() => load(emptyShow("Untitled show"))}>New</button>
-        <button onClick={() => load(sampleShow)}>Sample</button>
+        <button onClick={() => load(dliveShow)}>Sample</button>
         <button onClick={onOpen}>Open…</button>
         <button onClick={() => onSave(false)}>Save</button>
         <button onClick={() => onSave(true)}>Save as…</button>
