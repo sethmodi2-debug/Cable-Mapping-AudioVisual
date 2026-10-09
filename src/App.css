@@ -492,6 +492,22 @@ button.danger {
   visibility: hidden;
 }
 
+.cable-label.faded {
+  opacity: 0.2;
+}
+
+/* While something is selected, what it's plugged into stands out and the
+   rest of the map steps back. */
+.react-flow__node.faded {
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.react-flow__node.linked .device-node:not(.selected) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
 .cable-label.selected {
   box-shadow: 0 0 0 2px var(--accent);
 }

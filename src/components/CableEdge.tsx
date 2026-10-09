@@ -1,5 +1,6 @@
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type Edge, type EdgeProps } from "@xyflow/react";
 import { routeMiddle, routePath, type Point } from "../model/routing";
+import { labelTextColor } from "./cableColors";
 
 export type CableEdgeData = {
   label: string;
@@ -12,6 +13,8 @@ export type CableEdgeData = {
   color: string;
   bidirectional: boolean;
   animate: boolean;
+  // Set while a device or cable is selected: whether this cable belongs to it.
+  focus?: "linked" | "faded";
 };
 export type CableEdgeType = Edge<CableEdgeData, "cable">;
 
@@ -63,8 +66,16 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
 
   return (
     <>
-      <BaseEdge id={id} path={path} style={{ stroke: color, strokeWidth: selected ? 4 : 2.5, opacity: selected ? 1 : 0.85 }} />
-      {animate && (
+      <BaseEdge
+        id={id}
+        path={path}
+        style={{
+          stroke: color,
+          strokeWidth: selected ? 4 : data.focus === "linked" ? 3.5 : 2.5,
+          opacity: data.focus === "faded" ? 0.15 : selected || data.focus === "linked" ? 1 : 0.85,
+        }}
+      />
+      {animate && data.focus !== "faded" && (
         <g>
           {dots(false)}
           {bidirectional && dots(true)}
@@ -73,8 +84,8 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
       <EdgeLabelRenderer>
         <div
           data-edge={id}
-          className={`cable-label${selected ? " selected" : ""}${data.labelAt === null ? " hidden" : ""}`}
-          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color }}
+          className={`cable-label${selected ? " selected" : ""}${data.labelAt === null ? " hidden" : ""}${data.focus === "faded" ? " faded" : ""}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color, color: labelTextColor(color) }}
         >
           {data.label}
         </div>

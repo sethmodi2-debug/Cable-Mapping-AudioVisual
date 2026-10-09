@@ -124,6 +124,21 @@ export function MapView({ show, onChange }: Props) {
   const [, setHandlesMoved] = useState(0);
   const onHandlesMoved = useCallback(() => setHandlesMoved((n) => n + 1), []);
 
+  // What the selection is plugged into: picking a device lights up its
+  // cables and the devices at their other ends, and fades everything else.
+  const focus = useMemo(() => {
+    if (!selection) return null;
+    const deviceOf = new Map(show.ports.map((p) => [p.id, p.deviceId]));
+    const cables = show.connections.filter((c) =>
+      selection.kind === "connection"
+        ? c.id === selection.id
+        : deviceOf.get(c.fromPortId) === selection.id || deviceOf.get(c.toPortId) === selection.id,
+    );
+    const devices = new Set(cables.flatMap((c) => [deviceOf.get(c.fromPortId), deviceOf.get(c.toPortId)]));
+    if (selection.kind === "device") devices.add(selection.id);
+    return { devices, cables: new Set(cables.map((c) => c.id)) };
+  }, [show, selection]);
+
   const nodes: DeviceNodeType[] = useMemo(() => {
     const connected = new Set(show.connections.flatMap((c) => [c.fromPortId, c.toPortId]));
     return show.devices.map((device, i) => ({
@@ -131,10 +146,11 @@ export function MapView({ show, onChange }: Props) {
       type: "device",
       position: device.position ?? { x: 40 + (i % 4) * 280, y: 40 + Math.floor(i / 4) * 260 },
       data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp, onToggleSection: toggleSection, onFlip: flip, onHandlesMoved },
+      className: !focus || exporting ? undefined : focus.devices.has(device.id) ? "linked" : "faded",
       selected: selection?.kind === "device" && selection.id === device.id,
       measured: sizes[device.id],
     }));
-  }, [show, selection, sizes, onHandlesMoved]);
+  }, [show, selection, sizes, onHandlesMoved, focus, exporting]);
 
   // Every cable's path around the devices, worked out from where the
   // devices are now and where their port dots sit.
@@ -193,11 +209,12 @@ export function MapView({ show, onChange }: Props) {
             color: type.color,
             bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
             animate: animate && !exporting,
+            focus: !focus || exporting ? undefined : focus.cables.has(conn.id) ? "linked" : "faded",
           },
         },
       ];
     });
-  }, [show, selection, animate, exporting, pickedUp, labelSpots, snapCables, routes]);
+  }, [show, selection, animate, exporting, pickedUp, labelSpots, snapCables, routes, focus]);
 
   // Port dots move inside a device when it's flipped, folded or given new
   // ports; pick up where they are now after each draw.
@@ -225,7 +242,8 @@ export function MapView({ show, onChange }: Props) {
       }));
       const next: Record<Id, { x: number; y: number } | null> = {};
       // The selected cable gets first pick, so its label always shows if it can.
-      const order = [...edges].sort((a, b) => Number(!!b.selected) - Number(!!a.selected));
+      const first = (e: CableEdgeType) => Number(!!e.selected) * 2 + Number(e.data?.focus === "linked");
+      const order = [...edges].sort((a, b) => first(b) - first(a));
       for (const edge of order) {
         if (edge.hidden) continue;
         const path = root.querySelector<SVGPathElement>(`.react-flow__edge[data-id="${CSS.escape(edge.id)}"] path.react-flow__edge-path`);
