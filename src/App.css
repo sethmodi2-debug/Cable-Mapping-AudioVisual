@@ -45,3 +45,41 @@ td {
     color: #ff8a80;
   }
 }
+
+.toolbar,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.show-name {
+  font-size: 1.4rem;
+  font-weight: 600;
+  min-width: 240px;
+}
+
+.path {
+  opacity: 0.6;
+  font-size: 0.85rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 4px 8px;
+}
+
+input[type="number"] {
+  width: 4em;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: #b00020;
+  cursor: pointer;
+}
