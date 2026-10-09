@@ -80,6 +80,11 @@ export const PRESETS: Preset[] = [
   { kind: "Laptop", ports: [{ name: "HDMI Out", direction: "out", connector: "HDMI", protocol: "HDMI" }] },
 ];
 
+const BLANK_PORTS: PortSpec[] = [
+  { name: "Input", direction: "in", connector: "XLR3", count: 1 },
+  { name: "Output", direction: "out", connector: "XLR3", count: 1 },
+];
+
 export function presetLabel(preset: Preset): string {
   return preset.model ? [preset.manufacturer, preset.model].filter(Boolean).join(" ") : preset.kind;
 }
@@ -96,19 +101,18 @@ export function addPreset(show: Show, preset: Preset, position: { x: number; y: 
   const device = next.devices[next.devices.length - 1];
   device.position = position;
   if (preset.model) device.model = presetLabel(preset);
-  // Banks of sockets (Input 1..24) start empty, since most shows use only a
-  // few; add them from the side panel. One-off sockets such as a network
-  // port, SLink or a mic's output come with the device.
-  const ports: Port[] = preset.ports
-    .filter((spec) => (spec.count ?? 1) === 1)
-    .map((spec) => ({
-      id: newId(),
-      deviceId: device.id,
-      name: spec.count ? `${spec.name} 1` : spec.name,
-      direction: spec.direction,
-      connector: spec.connector,
-      protocol: spec.protocol,
-    }));
+  // A bank of sockets (Input 1..24) starts with just its first one, since
+  // most shows use only a few; add more from the side panel. A blank device
+  // gets one XLR in and out.
+  const specs: PortSpec[] = preset.ports.length > 0 ? preset.ports : BLANK_PORTS;
+  const ports: Port[] = specs.map((spec) => ({
+    id: newId(),
+    deviceId: device.id,
+    name: spec.count ? `${spec.name} 1` : spec.name,
+    direction: spec.direction,
+    connector: spec.connector,
+    protocol: spec.protocol,
+  }));
   device.system = preset.system ?? deviceSystem(device, ports);
   return { ...next, ports: [...next.ports, ...ports] };
 }

@@ -364,7 +364,7 @@ button.danger {
   padding-bottom: 4px;
 }
 
-.port-ip {
+.device-ip {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
   color: var(--accent);
@@ -616,6 +616,21 @@ button:disabled {
 .inspector .route {
   font-weight: 600;
   margin: 0;
+}
+
+.port-group + .port-group {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.port-group-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
 }
 
 .port-list {

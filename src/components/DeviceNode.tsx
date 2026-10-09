@@ -71,7 +71,6 @@ function PortRow(props: PortRowProps) {
       <PortHandles {...props} />
       <span className="port-name">{port.name}</span>
       <span className="port-connector">{port.protocol ?? cableType(port.connector).short}</span>
-      {port.ip && <span className="port-ip">{port.ip}</span>}
     </div>
   );
 }
@@ -133,6 +132,7 @@ export function DeviceNode({ id, data, selected }: NodeProps<DeviceNodeType>) {
           </span>
         </div>
         <div className="device-meta">{meta}</div>
+        {device.ip && <div className="device-ip">{device.ip}</div>}
       </div>
       {(inputs.length > 0 || outputs.length > 0) && (
         <div className="device-ports">

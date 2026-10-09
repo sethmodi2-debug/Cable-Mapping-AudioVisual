@@ -72,14 +72,19 @@ describe("connectPorts", () => {
 });
 
 describe("addPreset", () => {
-  it("names devices by kind and leaves banks of sockets empty", () => {
+  it("names devices by kind and starts each bank of sockets with one", () => {
     const box = PRESETS.find((p) => p.kind === "Stage box")!;
     let show = addPreset(emptyShow("t"), box, { x: 10, y: 20 });
     show = addPreset(show, box, { x: 10, y: 20 });
     expect(show.devices.map((d) => d.name)).toEqual(["Stage box 1", "Stage box 2"]);
     expect(show.devices[0].position).toEqual({ x: 10, y: 20 });
-    // 16 inputs and 8 outputs are left off; the single SLink port stays.
-    expect(show.ports.filter((p) => p.deviceId === show.devices[0].id).map((p) => p.name)).toEqual(["SLink"]);
+    // One of the 16 inputs and one of the 8 outputs, plus the SLink port.
+    expect(show.ports.filter((p) => p.deviceId === show.devices[0].id).map((p) => p.name)).toEqual(["Input 1", "Output 1", "SLink"]);
+  });
+
+  it("gives a blank device one XLR in and out", () => {
+    const show = addPreset(emptyShow("t"), { kind: "Custom", model: "Thing", ports: [] }, { x: 0, y: 0 });
+    expect(show.ports.map((p) => `${p.name} ${p.direction} ${p.connector}`)).toEqual(["Input 1 in XLR3", "Output 1 out XLR3"]);
   });
 });
 
@@ -113,14 +118,14 @@ describe("disconnect", () => {
 });
 
 describe("catalog products", () => {
-  it("adds a product named after its model with its one-off ports", () => {
+  it("adds a product named after its model with a starting set of ports", () => {
     const qu6d = CATALOG.find((p) => p.model === "Qu-6D")!;
     let show = addPreset(emptyShow("t"), qu6d, { x: 0, y: 0 });
     show = addPreset(show, qu6d, { x: 0, y: 0 });
     expect(show.devices.map((d) => d.name)).toEqual(["Qu-6D", "Qu-6D 2"]);
     expect(show.devices[0].model).toBe("Allen & Heath Qu-6D");
     const ports = show.ports.filter((p) => p.deviceId === show.devices[0].id);
-    expect(ports.filter((p) => p.direction === "in" && p.connector === "XLR3")).toHaveLength(0);
+    expect(ports.filter((p) => p.direction === "in" && p.connector === "XLR3")).toHaveLength(1);
     expect(ports.find((p) => p.protocol === "SLink")).toBeDefined();
     expect(ports.find((p) => p.protocol === "Dante")).toBeDefined();
   });

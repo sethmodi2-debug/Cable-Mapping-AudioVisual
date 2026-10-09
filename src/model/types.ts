@@ -50,6 +50,7 @@ export interface Device {
   position?: { x: number; y: number }; // where the device sits on the map
   system?: SystemType; // worked out from the ports when not set
   collapsed?: Direction[]; // port sections folded away on the map
+  ip?: string; // networked devices, e.g. "192.168.1.20"
 }
 
 export interface Port {
@@ -59,7 +60,6 @@ export interface Port {
   direction: Direction;
   connector: Connector;
   protocol?: Protocol; // set on network ports, e.g. a Dante or SLink port
-  ip?: string; // network ports only, e.g. "192.168.1.20"
 }
 
 export interface Cable {
