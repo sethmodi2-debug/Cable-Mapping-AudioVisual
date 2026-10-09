@@ -44,6 +44,36 @@ const ST_IN: PortSpec[] = [
   { name: "ST2 L/R", direction: "in", connector: "TRS" },
 ];
 
+// Video switchers. Audio often runs into them too (mic and XLR inputs), so
+// those are listed alongside the video sockets.
+interface SwitcherIo {
+  hdmiIn?: number;
+  sdiIn?: number;
+  hdmiOut?: number;
+  sdiOut?: number;
+  micIn?: number; // 3.5 mm
+  xlrIn?: number;
+  xlrOut?: number;
+}
+
+function switcher(maker: string, model: string, io: SwitcherIo, network = true): Preset {
+  const ports: PortSpec[] = [];
+  const add = (count: number | undefined, spec: Omit<PortSpec, "count">) => {
+    if (count) ports.push({ ...spec, count: count > 1 ? count : undefined });
+  };
+  add(io.hdmiIn, { name: "HDMI In", direction: "in", connector: "HDMI", protocol: "HDMI" });
+  add(io.sdiIn, { name: "SDI In", direction: "in", connector: "BNC", protocol: "SDI" });
+  add(io.micIn, { name: "Mic In", direction: "in", connector: "TRS" });
+  add(io.xlrIn, { name: "Audio In", direction: "in", connector: "XLR3" });
+  add(io.hdmiOut, { name: "HDMI Out", direction: "out", connector: "HDMI", protocol: "HDMI" });
+  add(io.sdiOut, { name: "SDI Out", direction: "out", connector: "BNC", protocol: "SDI" });
+  add(io.xlrOut, { name: "Audio Out", direction: "out", connector: "XLR3" });
+  if (network) ports.push({ name: "Network", direction: "io", connector: "RJ45" });
+  return { ...item("Video switchers", "Video switcher", maker, model, ports), system: "Video" };
+}
+
+const BMD = "Blackmagic Design";
+
 const AH = "Allen & Heath";
 const AH_SURFACE_NET: NetPort[] = [["gigaACE", "gigaACE"], ["DX A", "SLink"], ["DX B", "SLink"]];
 const DIGICO_NET: NetPort[] = [["MADI A", "MADI"], ["MADI B", "MADI"], ["Optocore", "Optocore"]];
@@ -241,4 +271,39 @@ export const CATALOG: Preset[] = [
     { name: "Thru", direction: "out", connector: "TS" },
     { name: "Out", direction: "out", connector: "XLR3" },
   ]),
+
+  // ---- Video switchers ----
+  // Blackmagic Design ATEM
+  switcher(BMD, "ATEM Mini", { hdmiIn: 4, hdmiOut: 1, micIn: 2 }, false),
+  switcher(BMD, "ATEM Mini Pro", { hdmiIn: 4, hdmiOut: 1, micIn: 2 }),
+  switcher(BMD, "ATEM Mini Pro ISO", { hdmiIn: 4, hdmiOut: 1, micIn: 2 }),
+  switcher(BMD, "ATEM Mini Extreme", { hdmiIn: 8, hdmiOut: 2, micIn: 2 }),
+  switcher(BMD, "ATEM Mini Extreme ISO", { hdmiIn: 8, hdmiOut: 2, micIn: 2 }),
+  switcher(BMD, "ATEM SDI", { sdiIn: 4, sdiOut: 3, micIn: 2 }),
+  switcher(BMD, "ATEM SDI Pro ISO", { sdiIn: 4, sdiOut: 3, micIn: 2 }),
+  switcher(BMD, "ATEM SDI Extreme ISO", { sdiIn: 8, sdiOut: 6, micIn: 2 }),
+  switcher(BMD, "ATEM Television Studio HD8", { sdiIn: 8, sdiOut: 4, xlrIn: 2 }),
+  switcher(BMD, "ATEM Television Studio HD8 ISO", { sdiIn: 8, sdiOut: 4, xlrIn: 2 }),
+  switcher(BMD, "ATEM Television Studio 4K8", { sdiIn: 8, sdiOut: 4, xlrIn: 2 }),
+  switcher(BMD, "ATEM 1 M/E Constellation HD", { sdiIn: 10, sdiOut: 6 }),
+  switcher(BMD, "ATEM 2 M/E Constellation HD", { sdiIn: 20, sdiOut: 12 }),
+  switcher(BMD, "ATEM 4 M/E Constellation HD", { sdiIn: 40, sdiOut: 24 }),
+  switcher(BMD, "ATEM Constellation 8K", { sdiIn: 40, sdiOut: 24 }),
+  // Roland
+  switcher("Roland", "V-02HD MK II", { hdmiIn: 2, hdmiOut: 2 }, false),
+  switcher("Roland", "V-1HD", { hdmiIn: 4, hdmiOut: 2 }, false),
+  switcher("Roland", "V-1HD+", { hdmiIn: 4, hdmiOut: 2, xlrIn: 1 }, false),
+  switcher("Roland", "V-1SDI", { sdiIn: 3, hdmiIn: 2, sdiOut: 2, hdmiOut: 1, xlrIn: 2 }, false),
+  switcher("Roland", "V-8HD", { hdmiIn: 8, hdmiOut: 3, xlrIn: 2 }),
+  switcher("Roland", "V-60HD", { sdiIn: 4, hdmiIn: 2, sdiOut: 2, hdmiOut: 2, xlrIn: 2 }),
+  switcher("Roland", "V-80HD", { hdmiIn: 8, hdmiOut: 3, xlrIn: 4, xlrOut: 2 }),
+  switcher("Roland", "V-160HD", { sdiIn: 8, hdmiIn: 8, sdiOut: 3, hdmiOut: 4, xlrIn: 2, xlrOut: 1 }),
+  switcher("Roland", "VR-6HD", { hdmiIn: 6, hdmiOut: 3, xlrIn: 4, xlrOut: 2 }),
+  switcher("Roland", "VR-120HD", { sdiIn: 6, hdmiIn: 6, sdiOut: 3, hdmiOut: 3, xlrIn: 6, xlrOut: 2 }),
+  // Others
+  switcher("Barco", "E2 Gen 2", { hdmiIn: 8, sdiIn: 8, hdmiOut: 4, sdiOut: 4 }),
+  switcher("Barco", "S3-4K", { hdmiIn: 4, sdiIn: 4, hdmiOut: 2, sdiOut: 2 }),
+  switcher("Ross Video", "Carbonite Black Solo", { sdiIn: 9, hdmiIn: 1, sdiOut: 6 }),
+  switcher("Panasonic", "AV-HLC100", { sdiIn: 5, hdmiIn: 2, sdiOut: 3, hdmiOut: 1 }),
+  switcher("Magewell", "Director Mini", { hdmiIn: 1, hdmiOut: 1, micIn: 1 }),
 ];

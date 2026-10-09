@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   addPort,
+  numberedNames,
   disconnect,
   removeDevice,
   removePort,
@@ -50,6 +51,7 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
   const [portName, setPortName] = useState("");
   const [direction, setDirection] = useState<Direction>("in");
   const [connector, setConnector] = useState<Connector>("XLR3");
+  const [quantity, setQuantity] = useState(1);
 
   return (
     <aside className="inspector">
@@ -122,16 +124,32 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
         className="panel-card add-port"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!portName.trim()) return;
-          onChange(addPort(show, { deviceId, name: portName.trim(), direction, connector }));
+          const typed = portName.trim();
+          const existing = ports.map((p) => p.name);
+          // A single port with a name typed in keeps that name; otherwise ports are numbered.
+          const names =
+            typed && quantity === 1 && !existing.includes(typed) ? [typed] : numberedNames(existing, typed || DEFAULT_PORT_NAMES[direction], quantity);
+          onChange(names.reduce((next, name) => addPort(next, { deviceId, name, direction, connector }), show));
           setPortName("");
         }}
       >
-        <h4>+ Add a port</h4>
-        <label>
-          Port name
-          <input placeholder="Input 17, Aux 3, Dante…" value={portName} onChange={(e) => setPortName(e.target.value)} />
-        </label>
+        <h4>+ Add ports</h4>
+        <div className="add-port-row">
+          <label className="grow">
+            Name
+            <input placeholder={DEFAULT_PORT_NAMES[direction]} value={portName} onChange={(e) => setPortName(e.target.value)} />
+          </label>
+          <label>
+            How many
+            <input
+              type="number"
+              min={1}
+              max={128}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.min(128, Math.max(1, Number(e.target.value) || 1)))}
+            />
+          </label>
+        </div>
         <div className="add-port-row">
           <label>
             Direction
@@ -152,9 +170,10 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
             </select>
           </label>
         </div>
-        <button type="submit" className="primary" disabled={!portName.trim()}>
-          Add port
+        <button type="submit" className="primary">
+          Add {quantity > 1 ? `${quantity} ports` : "port"}
         </button>
+        <p className="hint">Numbered on from what's there, e.g. {DEFAULT_PORT_NAMES[direction]} 1, 2, 3…</p>
       </form>
 
       <button
@@ -169,6 +188,8 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
     </aside>
   );
 }
+
+const DEFAULT_PORT_NAMES: Record<Direction, string> = { in: "Input", out: "Output", io: "Network" };
 
 function isValidIp(ip: string): boolean {
   const parts = ip.split(".");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCable, addConnection, addDevice, connectPorts, disconnect, reconnect, removeCable, removeDevice, removePort } from "./edit";
+import { addCable, addConnection, addDevice, connectPorts, disconnect, reconnect, removeCable, removeDevice, removePort, numberedNames } from "./edit";
 import { CATALOG } from "./catalog";
 import { PRESETS, addPreset } from "./presets";
 import { emptyShow, validate } from "./show";
@@ -72,13 +72,22 @@ describe("connectPorts", () => {
 });
 
 describe("addPreset", () => {
-  it("names devices by kind and expands counted ports", () => {
+  it("names devices by kind and leaves banks of sockets empty", () => {
     const box = PRESETS.find((p) => p.kind === "Stage box")!;
     let show = addPreset(emptyShow("t"), box, { x: 10, y: 20 });
     show = addPreset(show, box, { x: 10, y: 20 });
     expect(show.devices.map((d) => d.name)).toEqual(["Stage box 1", "Stage box 2"]);
     expect(show.devices[0].position).toEqual({ x: 10, y: 20 });
-    expect(show.ports.filter((p) => p.deviceId === show.devices[0].id)).toHaveLength(25);
+    // 16 inputs and 8 outputs are left off; the single SLink port stays.
+    expect(show.ports.filter((p) => p.deviceId === show.devices[0].id).map((p) => p.name)).toEqual(["SLink"]);
+  });
+});
+
+describe("numberedNames", () => {
+  it("carries on from the highest number", () => {
+    expect(numberedNames(["Input 1", "Input 2", "Output 1"], "Input", 3)).toEqual(["Input 3", "Input 4", "Input 5"]);
+    expect(numberedNames(["SLink"], "Input", 2)).toEqual(["Input 1", "Input 2"]);
+    expect(numberedNames(["Aux 2", "Aux 10"], "Aux", 1)).toEqual(["Aux 11"]);
   });
 });
 
@@ -104,14 +113,15 @@ describe("disconnect", () => {
 });
 
 describe("catalog products", () => {
-  it("adds a product named after its model with its rear-panel ports", () => {
+  it("adds a product named after its model with its one-off ports", () => {
     const qu6d = CATALOG.find((p) => p.model === "Qu-6D")!;
     let show = addPreset(emptyShow("t"), qu6d, { x: 0, y: 0 });
     show = addPreset(show, qu6d, { x: 0, y: 0 });
     expect(show.devices.map((d) => d.name)).toEqual(["Qu-6D", "Qu-6D 2"]);
     expect(show.devices[0].model).toBe("Allen & Heath Qu-6D");
     const ports = show.ports.filter((p) => p.deviceId === show.devices[0].id);
-    expect(ports.filter((p) => p.direction === "in" && p.connector === "XLR3")).toHaveLength(24);
+    expect(ports.filter((p) => p.direction === "in" && p.connector === "XLR3")).toHaveLength(0);
+    expect(ports.find((p) => p.protocol === "SLink")).toBeDefined();
     expect(ports.find((p) => p.protocol === "Dante")).toBeDefined();
   });
 

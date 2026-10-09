@@ -7,7 +7,7 @@ export interface PortSpec {
   direction: Direction;
   connector: Connector;
   protocol?: Protocol;
-  count?: number; // expands "Input" into "Input 1".."Input n"
+  count?: number; // how many the product has: "Input" x 24 is Input 1..24
 }
 
 // Picker sections, in display order.
@@ -19,6 +19,7 @@ export const CATEGORIES = [
   "Dynamic mics",
   "Condenser mics",
   "DI boxes",
+  "Video switchers",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -95,17 +96,19 @@ export function addPreset(show: Show, preset: Preset, position: { x: number; y: 
   const device = next.devices[next.devices.length - 1];
   device.position = position;
   if (preset.model) device.model = presetLabel(preset);
-  const ports: Port[] = preset.ports.flatMap((spec) => {
-    const names = spec.count ? Array.from({ length: spec.count }, (_, i) => `${spec.name} ${i + 1}`) : [spec.name];
-    return names.map((name) => ({
+  // Banks of sockets (Input 1..24) start empty, since most shows use only a
+  // few; add them from the side panel. One-off sockets such as a network
+  // port, SLink or a mic's output come with the device.
+  const ports: Port[] = preset.ports
+    .filter((spec) => (spec.count ?? 1) === 1)
+    .map((spec) => ({
       id: newId(),
       deviceId: device.id,
-      name,
+      name: spec.count ? `${spec.name} 1` : spec.name,
       direction: spec.direction,
       connector: spec.connector,
       protocol: spec.protocol,
     }));
-  });
   device.system = preset.system ?? deviceSystem(device, ports);
   return { ...next, ports: [...next.ports, ...ports] };
 }
