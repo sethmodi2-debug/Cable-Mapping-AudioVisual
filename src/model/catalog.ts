@@ -25,9 +25,14 @@ function item(category: Category, kind: string, manufacturer: string, model: str
   return { category, kind, manufacturer, model, ports };
 }
 
-const surface = (maker: string, model: string, ports: PortSpec[]) => item("Consoles & surfaces", "Console", maker, model, ports);
+// Desks and engines all have a network socket for remote control and
+// editors, even when their audio runs over another protocol.
+const CONTROL: PortSpec = { name: "Network", direction: "io", connector: "RJ45" };
+const withControl = (ports: PortSpec[]) => (ports.some((p) => p.name === "Network") ? ports : [...ports, CONTROL]);
+
+const surface = (maker: string, model: string, ports: PortSpec[]) => item("Consoles & surfaces", "Console", maker, model, withControl(ports));
 const stagebox = (maker: string, model: string, ports: PortSpec[]) => item("Stage boxes & I/O", "Stage box", maker, model, ports);
-const engine = (maker: string, model: string, ports: PortSpec[]) => item("Engines & mix racks", "Mix engine", maker, model, ports);
+const engine = (maker: string, model: string, ports: PortSpec[]) => item("Engines & mix racks", "Mix engine", maker, model, withControl(ports));
 
 const MIC_OUT: PortSpec[] = [{ name: "Out", direction: "out", connector: "XLR3" }];
 const dynamic = (maker: string, model: string) => item("Dynamic mics", "Mic", maker, model, MIC_OUT);

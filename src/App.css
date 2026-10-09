@@ -261,9 +261,29 @@ button.danger {
   border-radius: 6px 6px 0 0;
 }
 
+.device-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .device-name {
   font-weight: 700;
   font-size: 14px;
+}
+
+/* Which system the device belongs to (Audio, Video, Network...) */
+.system-tag {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
 }
 
 .device-meta {
@@ -287,6 +307,7 @@ button.danger {
 }
 
 .port-group-label {
+  position: relative;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -306,6 +327,38 @@ button.danger {
 .network-ports .port-group-label {
   align-self: stretch;
   text-align: right;
+}
+
+/* Section titles fold their ports away when clicked */
+.section-toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.section-toggle:hover {
+  color: var(--text);
+}
+
+.section-toggle .chevron {
+  display: inline-block;
+  width: 1em;
+}
+
+.port-group-label.folded {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.port-ip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--accent);
 }
 
 .port {
@@ -376,12 +429,6 @@ button.danger {
   box-shadow: 0 0 0 2px var(--accent);
 }
 
-.cable-label-detail {
-  font-weight: 500;
-  opacity: 0.85;
-  margin-left: 4px;
-}
-
 .exporting .flow-dot {
   display: none;
 }
@@ -446,6 +493,24 @@ button.danger {
   margin: 8px 4px 2px;
 }
 
+.picker-web {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.picker-web-link {
+  display: block;
+  padding: 5px 6px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.picker-web-link:hover {
+  background: var(--surface-2);
+}
+
 .picker-item {
   display: flex;
   justify-content: space-between;
@@ -500,6 +565,15 @@ button.danger {
   color: var(--accent);
 }
 
+.ip-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.field-warning {
+  color: var(--danger);
+  font-size: 0.75rem;
+}
+
 .add-port-row {
   display: flex;
   gap: 8px;
@@ -514,8 +588,8 @@ button.danger {
   width: 100%;
 }
 
-.add-port button.primary:disabled {
-  opacity: 0.5;
+button:disabled {
+  opacity: 0.45;
   cursor: default;
 }
 

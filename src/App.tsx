@@ -4,13 +4,16 @@ import { ConnectionsPanel } from "./components/ConnectionsPanel";
 import { DevicesPanel } from "./components/DevicesPanel";
 import { MapView } from "./components/MapView";
 import { openShowFile, saveShowFile } from "./file";
+import { useHistory, useUndoKeys } from "./history";
 import { sampleShow } from "./model/sample";
 import { emptyShow, pullList, validate } from "./model/show";
 import type { Show } from "./model/types";
 import "./App.css";
 
 function App() {
-  const [show, setShow] = useState<Show>(sampleShow);
+  const history = useHistory<Show>(sampleShow);
+  const show = history.value;
+  useUndoKeys(history.undo, history.redo);
   const [path, setPath] = useState<string | undefined>();
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,12 +22,13 @@ function App() {
   const issues = validate(show);
 
   function edit(next: Show) {
-    setShow(next);
+    history.set(next);
     setDirty(true);
   }
 
+  // Loading is undoable too, so New or Sample never loses work for good.
   function load(next: Show, nextPath?: string) {
-    setShow(next);
+    history.set(next);
     setPath(nextPath);
     setDirty(false);
     setError(null);
@@ -68,6 +72,12 @@ function App() {
         <button onClick={onOpen}>Open…</button>
         <button onClick={() => onSave(false)}>Save</button>
         <button onClick={() => onSave(true)}>Save as…</button>
+        <button onClick={history.undo} disabled={!history.canUndo} title="Undo (Ctrl+Z)">
+          ↶ Undo
+        </button>
+        <button onClick={history.redo} disabled={!history.canRedo} title="Redo (Ctrl+Shift+Z)">
+          ↷ Redo
+        </button>
         <div className="tabs">
           <button className={tab === "map" ? "active" : ""} onClick={() => setTab("map")}>
             Map

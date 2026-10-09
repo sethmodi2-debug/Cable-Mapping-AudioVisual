@@ -11,7 +11,8 @@ import {
 } from "../model/edit";
 import { PROTOCOLS } from "../model/options";
 import { CABLE_TYPES, cableType } from "./cableColors";
-import type { Connector, Direction, Id, Protocol, Show } from "../model/types";
+import { deviceSystem, isNetworkPort, SYSTEMS } from "../model/systems";
+import type { Connector, Direction, Id, Protocol, Show, SystemType } from "../model/types";
 
 export type Selection = { kind: "device"; id: Id } | { kind: "connection"; id: Id } | null;
 
@@ -45,6 +46,7 @@ export function Inspector({ show, selection, onChange, onSelect }: Props) {
 function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; deviceId: Id } & Omit<Props, "selection" | "show">) {
   const device = show.devices.find((d) => d.id === deviceId)!;
   const ports = show.ports.filter((p) => p.deviceId === deviceId);
+  const networkPorts = ports.filter(isNetworkPort);
   const [portName, setPortName] = useState("");
   const [direction, setDirection] = useState<Direction>("in");
   const [connector, setConnector] = useState<Connector>("XLR3");
@@ -70,7 +72,34 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
             onChange={(e) => onChange(updateDevice(show, deviceId, { location: e.target.value || undefined }))}
           />
         </label>
+        <label>
+          System
+          <select value={deviceSystem(device, ports)} onChange={(e) => onChange(updateDevice(show, deviceId, { system: e.target.value as SystemType }))}>
+            {SYSTEMS.map((s) => (
+              <option key={s.name}>{s.name}</option>
+            ))}
+          </select>
+        </label>
       </section>
+
+      {networkPorts.length > 0 && (
+        <section className="panel-card">
+          <h4>IP addresses</h4>
+          {networkPorts.map((p) => (
+            <label key={p.id}>
+              {p.name}
+              <input
+                className="ip-input"
+                value={p.ip ?? ""}
+                placeholder="192.168.1.10"
+                inputMode="decimal"
+                onChange={(e) => onChange(updatePort(show, p.id, { ip: e.target.value.trim() || undefined }))}
+              />
+              {p.ip && !isValidIp(p.ip) && <span className="field-warning">Not a valid IPv4 address</span>}
+            </label>
+          ))}
+        </section>
+      )}
 
       <section className="panel-card">
         <h4>Ports ({ports.length})</h4>
@@ -139,6 +168,11 @@ function DeviceInspector({ show, deviceId, onChange, onSelect }: { show: Show; d
       </button>
     </aside>
   );
+}
+
+function isValidIp(ip: string): boolean {
+  const parts = ip.split(".");
+  return parts.length === 4 && parts.every((n) => /^\d{1,3}$/.test(n) && Number(n) <= 255);
 }
 
 const DIRECTION_LABELS: Record<Direction, string> = { in: "input", out: "output", io: "network" };
