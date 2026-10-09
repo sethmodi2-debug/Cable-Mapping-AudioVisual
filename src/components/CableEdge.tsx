@@ -2,7 +2,6 @@ import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type Edge, type EdgePro
 
 export type CableEdgeData = {
   label: string;
-  detail?: string; // channel, shown small after the label
   color: string;
   bidirectional: boolean;
   animate: boolean;
@@ -47,7 +46,6 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color }}
         >
           {data.label}
-          {data.detail && <span className="cable-label-detail">{data.detail}</span>}
         </div>
       </EdgeLabelRenderer>
     </>

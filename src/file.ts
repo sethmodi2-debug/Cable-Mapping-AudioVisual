@@ -1,4 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { readTextFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { parse, serialize } from "./model/show";
 import type { Show } from "./model/types";
@@ -37,4 +38,12 @@ export async function savePdf(data: ArrayBuffer, suggestedName: string): Promise
   if (!target) return null;
   await writeFile(target, new Uint8Array(data));
   return target;
+}
+
+// Opens a web page in the system browser from the desktop app. Returns false
+// in the web preview, where a normal link already does that.
+export function openInBrowser(url: string): boolean {
+  if (!isTauri) return false;
+  void openUrl(url);
+  return true;
 }

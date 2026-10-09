@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG } from "../model/catalog";
+import { openInBrowser } from "../file";
 import { CATEGORIES, PRESETS, type Category, type Preset } from "../model/presets";
 
 interface Props {
@@ -11,8 +12,12 @@ function portSummary(preset: Preset): string {
     preset.ports.filter((p) => p.direction === dir).reduce((n, p) => n + (p.count ?? 1), 0);
   const ins = count("in");
   const outs = count("out");
-  const network = [...new Set(preset.ports.filter((p) => p.direction === "io").map((p) => p.protocol))].join(", ");
+  const network = [...new Set(preset.ports.filter((p) => p.direction === "io" && p.protocol).map((p) => p.protocol))].join(", ");
   return [ins && `${ins} in`, outs && `${outs} out`, network].filter(Boolean).join(" · ");
+}
+
+function webSearchUrl(query: string): string {
+  return `https://www.google.com/search?q=${encodeURIComponent(`${query} specifications inputs outputs`)}`;
 }
 
 const ALL: Preset[] = [...PRESETS.map((p) => ({ ...p, category: "Generic" as const })), ...CATALOG];
@@ -104,8 +109,27 @@ export function AddDevicePicker({ onPick }: Props) {
                 </div>
               );
             })}
-            {groups.length === 0 && <p className="hint">No match. Pick a generic type and rename it.</p>}
+            {groups.length === 0 && <p className="hint">Not in the list yet.</p>}
           </div>
+          {q && (
+            // For gear that isn't listed: look it up online, then add it and
+            // fill in its ports from the spec sheet.
+            <div className="picker-web">
+              <a
+                className="picker-web-link"
+                href={webSearchUrl(query.trim())}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => openInBrowser(webSearchUrl(query.trim())) && e.preventDefault()}
+              >
+                🔍 Search the web for “{query.trim()}”
+              </a>
+              <button className="picker-item" onClick={() => pick({ kind: "Custom", model: query.trim(), ports: [] })}>
+                <span>+ Add “{query.trim()}” as a blank device</span>
+                <span className="hint">add ports in the side panel</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

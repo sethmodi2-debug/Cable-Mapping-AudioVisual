@@ -1,5 +1,6 @@
 import { addDevice, newId } from "./edit";
-import type { Connector, Direction, Port, Protocol, Show } from "./types";
+import { deviceSystem } from "./systems";
+import type { Connector, Direction, Port, Protocol, Show, SystemType } from "./types";
 
 export interface PortSpec {
   name: string;
@@ -26,6 +27,7 @@ export interface Preset {
   category?: Category; // defaults to "Generic"
   manufacturer?: string;
   model?: string;
+  system?: SystemType; // worked out from the ports when not set
   ports: PortSpec[];
 }
 
@@ -78,7 +80,7 @@ export const PRESETS: Preset[] = [
 ];
 
 export function presetLabel(preset: Preset): string {
-  return preset.model ? `${preset.manufacturer} ${preset.model}` : preset.kind;
+  return preset.model ? [preset.manufacturer, preset.model].filter(Boolean).join(" ") : preset.kind;
 }
 
 // Adds a device built from a preset and places it at position. Products are
@@ -104,5 +106,6 @@ export function addPreset(show: Show, preset: Preset, position: { x: number; y: 
       protocol: spec.protocol,
     }));
   });
+  device.system = preset.system ?? deviceSystem(device, ports);
   return { ...next, ports: [...next.ports, ...ports] };
 }

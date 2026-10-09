@@ -38,6 +38,9 @@ export type Protocol =
   | "HDMI"
   | "NDI";
 
+// Which part of the production a device belongs to, shown as a coloured tag.
+export type SystemType = "Audio" | "Video" | "Lighting" | "Network" | "Control" | "Power";
+
 export interface Device {
   id: Id;
   name: string;
@@ -45,6 +48,8 @@ export interface Device {
   model?: string; // manufacturer and model, e.g. "Allen & Heath Qu-6D"
   location?: string; // e.g. "Stage left", "FOH", "Rack 2"
   position?: { x: number; y: number }; // where the device sits on the map
+  system?: SystemType; // worked out from the ports when not set
+  collapsed?: Direction[]; // port sections folded away on the map
 }
 
 export interface Port {
@@ -54,6 +59,7 @@ export interface Port {
   direction: Direction;
   connector: Connector;
   protocol?: Protocol; // set on network ports, e.g. a Dante or SLink port
+  ip?: string; // network ports only, e.g. "192.168.1.20"
 }
 
 export interface Cable {

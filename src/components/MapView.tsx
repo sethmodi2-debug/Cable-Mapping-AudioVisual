@@ -12,9 +12,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useMemo, useRef, useState } from "react";
-import { connectPorts, disconnect, moveDevice, reconnect, removeDevice } from "../model/edit";
+import { connectPorts, disconnect, moveDevice, reconnect, removeDevice, updateDevice } from "../model/edit";
 import { addPreset, type Preset } from "../model/presets";
-import type { Connector, Id, Show } from "../model/types";
+import type { Connector, Direction, Id, Show } from "../model/types";
 import { AddDevicePicker } from "./AddDevicePicker";
 import { CableEdge, type CableEdgeType } from "./CableEdge";
 import { cableType, isBidirectional } from "./cableColors";
@@ -58,7 +58,7 @@ export function MapView({ show, onChange }: Props) {
       id: device.id,
       type: "device",
       position: device.position ?? { x: 40 + (i % 4) * 280, y: 40 + Math.floor(i / 4) * 260 },
-      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp },
+      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp, onToggleSection: toggleSection },
       selected: selection?.kind === "device" && selection.id === device.id,
       measured: sizes[device.id],
     }));
@@ -74,7 +74,6 @@ export function MapView({ show, onChange }: Props) {
       const cable = conn.cableId ? cables.get(conn.cableId) : undefined;
       const type = cableType(cable?.connector ?? fromPort.connector);
       const protocol = cable?.protocol ?? fromPort.protocol ?? "Analog";
-      const channel = cable && cable.channels > 1 && conn.channel !== undefined ? `ch ${conn.channel}` : undefined;
       return [
         {
           id: conn.id,
@@ -87,9 +86,8 @@ export function MapView({ show, onChange }: Props) {
           selected: selection?.kind === "connection" && selection.id === conn.id,
           hidden: conn.id === pickedUp,
           data: {
-            // The cable says what it is; its ID label lives in the side panel and lists.
+            // The cable just says what it is. Its ID and signal are in the side panel and lists.
             label: type.short,
-            detail: [protocol !== "Analog" && protocol !== type.short ? protocol : undefined, channel].filter(Boolean).join(" · ") || undefined,
             color: type.color,
             bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
             animate: animate && !exporting,
@@ -111,6 +109,14 @@ export function MapView({ show, onChange }: Props) {
     pickedUpRef.current = conn.id;
     setPickedUp(conn.id);
     handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0, clientX, clientY }));
+  }
+
+  function toggleSection(deviceId: Id, direction: Direction) {
+    const device = show.devices.find((d) => d.id === deviceId);
+    if (!device) return;
+    const folded = device.collapsed ?? [];
+    const collapsed = folded.includes(direction) ? folded.filter((d) => d !== direction) : [...folded, direction];
+    onChange(updateDevice(show, deviceId, { collapsed: collapsed.length ? collapsed : undefined }));
   }
 
   function onNodesChange(changes: NodeChange<DeviceNodeType>[]) {
