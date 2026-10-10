@@ -58,8 +58,8 @@ export async function buildShowPdf(show: Show, viewportEl: HTMLElement, nodes: N
   doc.text("Patch list", margin, margin + 8);
   autoTable(doc, {
     startY: margin + 18,
-    head: [["From", "To", "Cable", "Ch", "Signal"]],
-    body: patchList(show).map((r) => [`${r.fromDevice} · ${r.fromPort}`, `${r.toDevice} · ${r.toPort}`, r.cable, r.channel ?? "", r.protocol ?? ""]),
+    head: [["Cable", "From device", "Plugs out of", "To device", "Plugs into", "Signal", "Channel"]],
+    body: patchList(show).map((r) => [r.cable, r.fromDevice, r.fromPort, r.toDevice, r.toPort, r.protocol ?? "", r.channel ?? ""]),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [37, 99, 235] },
   });

@@ -244,6 +244,20 @@ button.danger {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 4px 8px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+/* A setting that's switched on lights up as a whole, not just its tick */
+.toggle:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.toggle input {
+  accent-color: #fff;
+  margin: 0;
 }
 
 /* Device boxes */
@@ -301,6 +315,7 @@ button.danger {
 
 .device-ports {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   gap: 16px;
   padding: 4px 0;
@@ -313,6 +328,44 @@ button.danger {
 
 .port-col-right {
   align-items: flex-end;
+}
+
+.device-ports.flipped {
+  flex-direction: row-reverse;
+}
+
+.port-col-right .port-group-label {
+  text-align: right;
+}
+
+.device-badges {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Swaps the sides of a device's inputs and outputs */
+.flip-toggle {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+  cursor: pointer;
+}
+
+.flip-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.flip-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .port-group-label {
@@ -439,6 +492,22 @@ button.danger {
   visibility: hidden;
 }
 
+.cable-label.faded {
+  opacity: 0.2;
+}
+
+/* While something is selected, what it's plugged into stands out and the
+   rest of the map steps back. */
+.react-flow__node.faded {
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.react-flow__node.linked .device-node:not(.selected) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
 .cable-label.selected {
   box-shadow: 0 0 0 2px var(--accent);
 }
@@ -538,6 +607,61 @@ button.danger {
 
 .picker-item:hover {
   background: var(--surface-2);
+}
+
+.picker-category.static {
+  cursor: default;
+}
+
+.picker-found {
+  display: flex;
+  align-items: center;
+}
+
+.picker-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 2px 6px;
+}
+
+.picker-remove:hover {
+  color: var(--danger, #dc2626);
+}
+
+.picker-lookup {
+  display: block;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 6px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.picker-key {
+  padding: 4px 6px 6px;
+}
+
+.picker-key .hint {
+  margin: 0 0 6px;
+}
+
+.picker-key input {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  padding: 2px 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-decoration: underline;
 }
 
 /* Inspector */
@@ -719,4 +843,161 @@ button:disabled {
 /* The grab area at each end of a cable, for moving or unplugging it */
 .react-flow__edgeupdater {
   cursor: grab;
+}
+
+.inspector label.check-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Lists tab */
+
+.container {
+  max-width: 1200px;
+}
+
+.lists h2 {
+  margin: 32px 0 2px;
+}
+
+.lists > section > .hint {
+  margin: 0 0 12px;
+}
+
+.lists-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 8px 0 12px;
+  color: var(--muted);
+}
+
+.lists-summary strong {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+/* Jump links, kept in view while scrolling */
+.lists-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.lists-nav a {
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.lists-nav a:hover {
+  background: var(--surface-2);
+}
+
+.lists section {
+  scroll-margin-top: 48px;
+}
+
+/* One card per device, each with its own port tables */
+.device-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.device-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.device-card header {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.device-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.device-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.device-card > .hint {
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.port-table {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.port-table th {
+  padding: 8px 12px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.port-table td {
+  padding: 4px 12px;
+}
+
+.port-cell {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cable-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tr.unused td {
+  color: var(--muted);
+}
+
+/* The patch list, one table per device */
+table.grouped {
+  table-layout: fixed;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+table.grouped .group-title th {
+  background: var(--surface-2);
+  font-size: 0.95rem;
+}
+
+.cable-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cable-tag .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }

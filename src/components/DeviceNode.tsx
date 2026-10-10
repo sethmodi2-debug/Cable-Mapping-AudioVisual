@@ -21,6 +21,9 @@ export type DeviceNodeData = {
   // Called when the user grabs an input that already has a cable in it.
   onPickUp: (portId: string, clientX: number, clientY: number) => void;
   onToggleSection: (deviceId: string, direction: Direction) => void;
+  onFlip: (deviceId: string) => void;
+  // Called once the dots have been measured again after they moved.
+  onHandlesMoved: () => void;
 };
 export type DeviceNodeType = Node<DeviceNodeData, "device">;
 
@@ -116,31 +119,53 @@ export function DeviceNode({ id, data, selected }: NodeProps<DeviceNodeType>) {
   const system = deviceSystem(device, ports);
   const collapsed = new Set(device.collapsed ?? []);
   const collapsedKey = [...collapsed].sort().join(",");
+  // Inputs sit on the left and outputs on the right, unless the device is
+  // flipped to suit where it sits on the map.
+  const inSide = device.flipped ? "right" : "left";
+  const outSide = device.flipped ? "left" : "right";
 
   // Folding a section moves handles without always resizing the node, so
   // tell React Flow to measure them again.
   const updateNodeInternals = useUpdateNodeInternals();
-  useEffect(() => updateNodeInternals(id), [id, collapsedKey, updateNodeInternals]);
+  const { onHandlesMoved } = data;
+  useEffect(() => {
+    updateNodeInternals(id);
+    // React Flow measures on the next frame; cables re-route on the one after.
+    const frame = requestAnimationFrame(() => requestAnimationFrame(onHandlesMoved));
+    return () => cancelAnimationFrame(frame);
+  }, [id, collapsedKey, device.flipped, updateNodeInternals, onHandlesMoved]);
 
   return (
     <div className={`device-node${selected ? " selected" : ""}`}>
       <div className="device-header">
         <div className="device-title">
           <div className="device-name">{device.name}</div>
-          <span className="system-tag" style={{ background: systemColor(system) }}>
-            {system}
-          </span>
+          <div className="device-badges">
+            {inputs.length + outputs.length > 0 && (
+              <button
+                className={`flip-toggle nodrag${device.flipped ? " on" : ""}`}
+                title="Swap the sides inputs and outputs are on"
+                aria-pressed={!!device.flipped}
+                onClick={() => data.onFlip(device.id)}
+              >
+                ⇄
+              </button>
+            )}
+            <span className="system-tag" style={{ background: systemColor(system) }}>
+              {system}
+            </span>
+          </div>
         </div>
         <div className="device-meta">{meta}</div>
         {device.ip && <div className="device-ip">{device.ip}</div>}
       </div>
       {(inputs.length > 0 || outputs.length > 0) && (
-        <div className="device-ports">
-          <div className="port-col">
-            <PortSection direction="in" ports={inputs} side="left" collapsed={collapsed.has("in")} data={data} />
+        <div className={`device-ports${device.flipped ? " flipped" : ""}`}>
+          <div className={`port-col port-col-${inSide}`}>
+            <PortSection direction="in" ports={inputs} side={inSide} collapsed={collapsed.has("in")} data={data} />
           </div>
-          <div className="port-col port-col-right">
-            <PortSection direction="out" ports={outputs} side="right" collapsed={collapsed.has("out")} data={data} />
+          <div className={`port-col port-col-${outSide}`}>
+            <PortSection direction="out" ports={outputs} side={outSide} collapsed={collapsed.has("out")} data={data} />
           </div>
         </div>
       )}

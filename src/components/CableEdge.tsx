@@ -1,14 +1,20 @@
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type Edge, type EdgeProps } from "@xyflow/react";
+import { routeMiddle, routePath, type Point } from "../model/routing";
+import { labelTextColor } from "./cableColors";
 
 export type CableEdgeData = {
   label: string;
   // Where the label goes, worked out so it clears devices and other labels.
   // Undefined puts it at the middle of the cable; null hides it.
   labelAt?: { x: number; y: number } | null;
+  // The way round the devices, from this cable's source port to its target.
+  route?: Point[];
   snap: boolean; // bend the cable on a grid line
   color: string;
   bidirectional: boolean;
   animate: boolean;
+  // Set while a device or cable is selected: whether this cable belongs to it.
+  focus?: "linked" | "faded";
 };
 export type CableEdgeType = Edge<CableEdgeData, "cable">;
 
@@ -20,7 +26,7 @@ const DURATION_S = 2.4;
 // that travel along it in the direction the signal flows.
 export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected }: EdgeProps<CableEdgeType>) {
   const snapTo = (v: number) => Math.round(v / GRID) * GRID;
-  const [path, midX, midY] = getSmoothStepPath({
+  let [path, midX, midY] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
@@ -32,6 +38,14 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
     centerY: data?.snap ? snapTo((sourceY + targetY) / 2) : undefined,
   });
   if (!data) return null;
+  // Use the route round the devices when it was worked out for where the
+  // ports are right now; otherwise fall back to the plain stepped line.
+  const route = data.route;
+  const near = (p: Point, x: number, y: number) => Math.abs(p.x - x) < 1.5 && Math.abs(p.y - y) < 1.5;
+  if (route && route.length >= 2 && near(route[0], sourceX, sourceY) && near(route[route.length - 1], targetX, targetY)) {
+    path = routePath(route, data.snap ? 0 : 8);
+    ({ x: midX, y: midY } = routeMiddle(route));
+  }
   const labelX = data.labelAt?.x ?? midX;
   const labelY = data.labelAt?.y ?? midY;
   const { color, animate, bidirectional } = data;
@@ -41,7 +55,8 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
       <circle key={`${reverse}-${i}`} className="flow-dot" r={3} fill={color}>
         <animateMotion
           dur={`${DURATION_S}s`}
-          begin={`${(i * DURATION_S) / DOTS}s`}
+          // Started part-way through already, so no dot waits at the corner of the map.
+          begin={`${-(i * DURATION_S) / DOTS}s`}
           repeatCount="indefinite"
           path={path}
           {...(reverse ? { keyPoints: "1;0", keyTimes: "0;1", calcMode: "linear" } : {})}
@@ -51,8 +66,16 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
 
   return (
     <>
-      <BaseEdge id={id} path={path} style={{ stroke: color, strokeWidth: selected ? 4 : 2.5, opacity: selected ? 1 : 0.85 }} />
-      {animate && (
+      <BaseEdge
+        id={id}
+        path={path}
+        style={{
+          stroke: color,
+          strokeWidth: selected ? 4 : data.focus === "linked" ? 3.5 : 2.5,
+          opacity: data.focus === "faded" ? 0.15 : selected || data.focus === "linked" ? 1 : 0.85,
+        }}
+      />
+      {animate && data.focus !== "faded" && (
         <g>
           {dots(false)}
           {bidirectional && dots(true)}
@@ -61,8 +84,8 @@ export function CableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
       <EdgeLabelRenderer>
         <div
           data-edge={id}
-          className={`cable-label${selected ? " selected" : ""}${data.labelAt === null ? " hidden" : ""}`}
-          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color }}
+          className={`cable-label${selected ? " selected" : ""}${data.labelAt === null ? " hidden" : ""}${data.focus === "faded" ? " faded" : ""}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`, background: color, color: labelTextColor(color) }}
         >
           {data.label}
         </div>

@@ -11,7 +11,7 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { connectPorts, disconnect, moveDevice, reconnect, removeDevice, updateDevice } from "../model/edit";
 import { addPreset, type Preset } from "../model/presets";
 import type { Connector, Direction, Id, Show } from "../model/types";
@@ -22,6 +22,7 @@ import { CableTypeMenu } from "./CableTypeMenu";
 import { DeviceNode, leftHandleId, portIdFromHandle, type DeviceNodeType } from "./DeviceNode";
 import { Inspector, type Selection } from "./Inspector";
 import { useColorMode } from "../theme";
+import { routeCables, type Box, type CableEnd, type RouteRequest, type Side } from "../model/routing";
 
 const nodeTypes = { device: DeviceNode };
 
@@ -76,6 +77,26 @@ interface Props {
   onChange: (show: Show) => void;
 }
 
+// Where each port's dot sits inside its device, as React Flow measured it.
+type HandleSpots = Record<string, Record<string, CableEnd>>;
+
+function readHandleSpots(flow: ReactFlowInstance<DeviceNodeType, CableEdgeType>, ids: string[]): HandleSpots {
+  const spots: HandleSpots = {};
+  for (const id of ids) {
+    const bounds = flow.getInternalNode(id)?.internals.handleBounds;
+    const mine: Record<string, CableEnd> = {};
+    for (const h of [...(bounds?.source ?? []), ...(bounds?.target ?? [])]) {
+      if (!h.id) continue;
+      const side = h.position as Side;
+      const x = side === "left" ? h.x : side === "right" ? h.x + h.width : h.x + h.width / 2;
+      const y = side === "top" ? h.y : side === "bottom" ? h.y + h.height : h.y + h.height / 2;
+      mine[h.id] = { x, y, side };
+    }
+    spots[id] = mine;
+  }
+  return spots;
+}
+
 export function MapView({ show, onChange }: Props) {
   const [selection, setSelection] = useState<Selection>(null);
   const colorMode = useColorMode();
@@ -99,6 +120,24 @@ export function MapView({ show, onChange }: Props) {
   const [snapDevices, setSnapDevices] = useStoredFlag("snapDevices");
   const [snapCables, setSnapCables] = useStoredFlag("snapCables");
   const [labelSpots, setLabelSpots] = useState<Record<Id, { x: number; y: number } | null>>({});
+  const [handleSpots, setHandleSpots] = useState<HandleSpots>({});
+  const [, setHandlesMoved] = useState(0);
+  const onHandlesMoved = useCallback(() => setHandlesMoved((n) => n + 1), []);
+
+  // What the selection is plugged into: picking a device lights up its
+  // cables and the devices at their other ends, and fades everything else.
+  const focus = useMemo(() => {
+    if (!selection) return null;
+    const deviceOf = new Map(show.ports.map((p) => [p.id, p.deviceId]));
+    const cables = show.connections.filter((c) =>
+      selection.kind === "connection"
+        ? c.id === selection.id
+        : deviceOf.get(c.fromPortId) === selection.id || deviceOf.get(c.toPortId) === selection.id,
+    );
+    const devices = new Set(cables.flatMap((c) => [deviceOf.get(c.fromPortId), deviceOf.get(c.toPortId)]));
+    if (selection.kind === "device") devices.add(selection.id);
+    return { devices, cables: new Set(cables.map((c) => c.id)) };
+  }, [show, selection]);
 
   const nodes: DeviceNodeType[] = useMemo(() => {
     const connected = new Set(show.connections.flatMap((c) => [c.fromPortId, c.toPortId]));
@@ -106,11 +145,39 @@ export function MapView({ show, onChange }: Props) {
       id: device.id,
       type: "device",
       position: device.position ?? { x: 40 + (i % 4) * 280, y: 40 + Math.floor(i / 4) * 260 },
-      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp, onToggleSection: toggleSection },
+      data: { device, ports: show.ports.filter((p) => p.deviceId === device.id), connected, onPickUp: pickUp, onToggleSection: toggleSection, onFlip: flip, onHandlesMoved },
+      className: !focus || exporting ? undefined : focus.devices.has(device.id) ? "linked" : "faded",
       selected: selection?.kind === "device" && selection.id === device.id,
       measured: sizes[device.id],
     }));
-  }, [show, selection, sizes]);
+  }, [show, selection, sizes, onHandlesMoved, focus, exporting]);
+
+  // Every cable's path around the devices, worked out from where the
+  // devices are now and where their port dots sit.
+  const routes = useMemo(() => {
+    const boxes: Box[] = [];
+    for (const n of nodes) {
+      if (!n.measured?.width || !n.measured?.height) continue;
+      boxes.push({ x: n.position.x, y: n.position.y, w: n.measured.width, h: n.measured.height });
+    }
+    const positions = new Map(nodes.map((n) => [n.id, n.position]));
+    const ports = new Map(show.ports.map((p) => [p.id, p]));
+    const end = (deviceId: Id, handle: string): CableEnd | null => {
+      const spot = handleSpots[deviceId]?.[handle];
+      const at = positions.get(deviceId);
+      return spot && at ? { x: at.x + spot.x, y: at.y + spot.y, side: spot.side } : null;
+    };
+    const requests: RouteRequest[] = [];
+    for (const conn of show.connections) {
+      const fromPort = ports.get(conn.fromPortId);
+      const toPort = ports.get(conn.toPortId);
+      if (!fromPort || !toPort || conn.id === pickedUp) continue;
+      const from = end(fromPort.deviceId, fromPort.id);
+      const to = end(toPort.deviceId, toPort.direction === "io" ? leftHandleId(toPort.id) : toPort.id);
+      if (from && to) requests.push({ id: conn.id, from, to });
+    }
+    return routeCables(boxes, requests, { grid: snapCables ? GRID : undefined });
+  }, [nodes, show, handleSpots, snapCables, pickedUp]);
 
   const edges: CableEdgeType[] = useMemo(() => {
     const ports = new Map(show.ports.map((p) => [p.id, p]));
@@ -137,15 +204,28 @@ export function MapView({ show, onChange }: Props) {
             // The cable just says what it is. Its ID and signal are in the side panel and lists.
             label: type.short,
             labelAt: labelSpots[conn.id],
+            route: routes[conn.id] ?? undefined,
             snap: snapCables,
             color: type.color,
             bidirectional: isBidirectional(protocol) || (fromPort.direction === "io" && toPort.direction === "io"),
             animate: animate && !exporting,
+            focus: !focus || exporting ? undefined : focus.cables.has(conn.id) ? "linked" : "faded",
           },
         },
       ];
     });
-  }, [show, selection, animate, exporting, pickedUp, labelSpots, snapCables]);
+  }, [show, selection, animate, exporting, pickedUp, labelSpots, snapCables, routes, focus]);
+
+  // Port dots move inside a device when it's flipped, folded or given new
+  // ports; pick up where they are now after each draw.
+  useEffect(() => {
+    if (!flow) return;
+    const frame = requestAnimationFrame(() => {
+      const next = readHandleSpots(flow, show.devices.map((d) => d.id));
+      setHandleSpots((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    });
+    return () => cancelAnimationFrame(frame);
+  });
 
   // After the map draws, place each cable's label on its cable where it
   // clears every device and every label placed before it, or hide it.
@@ -162,7 +242,8 @@ export function MapView({ show, onChange }: Props) {
       }));
       const next: Record<Id, { x: number; y: number } | null> = {};
       // The selected cable gets first pick, so its label always shows if it can.
-      const order = [...edges].sort((a, b) => Number(!!b.selected) - Number(!!a.selected));
+      const first = (e: CableEdgeType) => Number(!!e.selected) * 2 + Number(e.data?.focus === "linked");
+      const order = [...edges].sort((a, b) => first(b) - first(a));
       for (const edge of order) {
         if (edge.hidden) continue;
         const path = root.querySelector<SVGPathElement>(`.react-flow__edge[data-id="${CSS.escape(edge.id)}"] path.react-flow__edge-path`);
@@ -206,6 +287,11 @@ export function MapView({ show, onChange }: Props) {
     const folded = device.collapsed ?? [];
     const collapsed = folded.includes(direction) ? folded.filter((d) => d !== direction) : [...folded, direction];
     onChange(updateDevice(show, deviceId, { collapsed: collapsed.length ? collapsed : undefined }));
+  }
+
+  function flip(deviceId: Id) {
+    const device = show.devices.find((d) => d.id === deviceId);
+    if (device) onChange(updateDevice(show, deviceId, { flipped: device.flipped ? undefined : true }));
   }
 
   function onNodesChange(changes: NodeChange<DeviceNodeType>[]) {
