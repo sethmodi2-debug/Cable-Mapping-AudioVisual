@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { addDevice, removeDevice } from "../model/edit";
 import { CONNECTORS } from "../model/options";
+import { portNames } from "../model/portList";
 import type { Connector, Show } from "../model/types";
 
 interface Props {
@@ -49,24 +50,31 @@ export function DevicesPanel({ show, onChange }: Props) {
             <th>Name</th>
             <th>Kind</th>
             <th>Location</th>
-            <th>Ports</th>
+            <th>Inputs</th>
+            <th>Outputs</th>
+            <th>Network</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          {show.devices.map((d) => (
-            <tr key={d.id}>
-              <td>{d.name}</td>
-              <td>{d.kind}</td>
-              <td>{d.location ?? ""}</td>
-              <td>{show.ports.filter((p) => p.deviceId === d.id).length}</td>
-              <td>
-                <button className="link" onClick={() => onChange(removeDevice(show, d.id))}>
-                  Remove
-                </button>
-              </td>
-            </tr>
-          ))}
+          {show.devices.map((d) => {
+            const ports = show.ports.filter((p) => p.deviceId === d.id);
+            return (
+              <tr key={d.id}>
+                <td>{d.name}</td>
+                <td>{d.kind}</td>
+                <td>{d.location ?? ""}</td>
+                <td>{portNames(ports, "in")}</td>
+                <td>{portNames(ports, "out")}</td>
+                <td>{portNames(ports, "io")}</td>
+                <td>
+                  <button className="link" onClick={() => onChange(removeDevice(show, d.id))}>
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </section>

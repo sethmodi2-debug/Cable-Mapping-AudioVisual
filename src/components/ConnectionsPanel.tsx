@@ -67,22 +67,26 @@ export function ConnectionsPanel({ show, onChange }: Props) {
       <table>
         <thead>
           <tr>
-            <th>From</th>
-            <th>To</th>
             <th>Cable</th>
-            <th>Ch</th>
-            <th>Protocol</th>
+            <th>From device</th>
+            <th>Plugs out of</th>
+            <th>To device</th>
+            <th>Plugs into</th>
+            <th>Signal</th>
+            <th>Channel</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {patchList(show).map((row) => (
             <tr key={row.connectionId}>
-              <td>{row.fromDevice} · {row.fromPort}</td>
-              <td>{row.toDevice} · {row.toPort}</td>
               <td>{row.cable}</td>
-              <td>{row.channel ?? ""}</td>
+              <td>{row.fromDevice}</td>
+              <td>{row.fromPort}</td>
+              <td>{row.toDevice}</td>
+              <td>{row.toPort}</td>
               <td>{row.protocol ?? ""}</td>
+              <td>{row.channel ?? ""}</td>
               <td>
                 <button className="link" onClick={() => onChange(removeConnection(show, row.connectionId))}>
                   Remove
