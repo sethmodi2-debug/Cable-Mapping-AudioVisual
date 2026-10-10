@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { addDevice, removeDevice } from "../model/edit";
 import { CONNECTORS } from "../model/options";
-import { portNames } from "../model/portList";
 import type { Connector, Show } from "../model/types";
 
 interface Props {
@@ -64,9 +63,9 @@ export function DevicesPanel({ show, onChange }: Props) {
                 <td>{d.name}</td>
                 <td>{d.kind}</td>
                 <td>{d.location ?? ""}</td>
-                <td>{portNames(ports, "in")}</td>
-                <td>{portNames(ports, "out")}</td>
-                <td>{portNames(ports, "io")}</td>
+                <td>{ports.filter((p) => p.direction === "in").length}</td>
+                <td>{ports.filter((p) => p.direction === "out").length}</td>
+                <td>{ports.filter((p) => p.direction === "io").length}</td>
                 <td>
                   <button className="link" onClick={() => onChange(removeDevice(show, d.id))}>
                     Remove

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CablesPanel } from "./components/CablesPanel";
 import { ConnectionsPanel } from "./components/ConnectionsPanel";
 import { DevicesPanel } from "./components/DevicesPanel";
+import { PortsPanel } from "./components/PortsPanel";
 import { MapView } from "./components/MapView";
 import { openShowFile, saveShowFile } from "./file";
 import { useHistory, useUndoKeys } from "./history";
@@ -106,6 +107,7 @@ function App() {
       ) : (
         <div className="lists">
         <DevicesPanel show={show} onChange={edit} />
+        <PortsPanel show={show} />
         <CablesPanel show={show} onChange={edit} />
         <ConnectionsPanel show={show} onChange={edit} />
 

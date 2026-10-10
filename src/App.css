@@ -850,3 +850,8 @@ button:disabled {
   align-items: center;
   gap: 6px;
 }
+
+/* First row of each device in the port list */
+tr.group-start td {
+  border-top: 2px solid var(--border);
+}
