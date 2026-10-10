@@ -1,13 +1,10 @@
 import { useState } from "react";
-import { CablesPanel } from "./components/CablesPanel";
-import { ConnectionsPanel } from "./components/ConnectionsPanel";
-import { DevicesPanel } from "./components/DevicesPanel";
-import { PortsPanel } from "./components/PortsPanel";
+import { ListsView } from "./components/ListsView";
 import { MapView } from "./components/MapView";
 import { openShowFile, saveShowFile } from "./file";
 import { useHistory, useUndoKeys } from "./history";
 import { dliveShow } from "./model/dliveSample";
-import { emptyShow, pullList, validate } from "./model/show";
+import { emptyShow, validate } from "./model/show";
 import type { Show } from "./model/types";
 import "./App.css";
 
@@ -62,12 +59,7 @@ function App() {
   return (
     <main className={tab === "map" ? "app app-map" : "app container"}>
       <header className="toolbar">
-        <input
-          className="show-name"
-          value={show.name}
-          onChange={(e) => edit({ ...show, name: e.target.value })}
-          aria-label="Show name"
-        />
+        <input className="show-name" value={show.name} onChange={(e) => edit({ ...show, name: e.target.value })} aria-label="Show name" />
         <button onClick={() => load(emptyShow("Untitled show"))}>New</button>
         <button onClick={() => load(dliveShow)}>Sample</button>
         <button onClick={onOpen}>Open…</button>
@@ -102,40 +94,7 @@ function App() {
         </ul>
       )}
 
-      {tab === "map" ? (
-        <MapView show={show} onChange={edit} />
-      ) : (
-        <div className="lists">
-        <DevicesPanel show={show} onChange={edit} />
-        <PortsPanel show={show} />
-        <CablesPanel show={show} onChange={edit} />
-        <ConnectionsPanel show={show} onChange={edit} />
-
-        <section>
-          <h2>Cable pull list</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Connector</th>
-                <th>Length (m)</th>
-                <th>Channels</th>
-                <th>Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pullList(show).map((row) => (
-                <tr key={`${row.connector}-${row.lengthM}-${row.channels}`}>
-                  <td>{row.connector}</td>
-                  <td>{row.lengthM ?? ""}</td>
-                  <td>{row.channels}</td>
-                  <td>{row.count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-        </div>
-      )}
+      {tab === "map" ? <MapView show={show} onChange={edit} /> : <ListsView show={show} />}
     </main>
   );
 }

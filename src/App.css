@@ -851,7 +851,153 @@ button:disabled {
   gap: 6px;
 }
 
-/* First row of each device in the port list */
-tr.group-start td {
-  border-top: 2px solid var(--border);
+/* Lists tab */
+
+.container {
+  max-width: 1200px;
+}
+
+.lists h2 {
+  margin: 32px 0 2px;
+}
+
+.lists > section > .hint {
+  margin: 0 0 12px;
+}
+
+.lists-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 8px 0 12px;
+  color: var(--muted);
+}
+
+.lists-summary strong {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+/* Jump links, kept in view while scrolling */
+.lists-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.lists-nav a {
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.lists-nav a:hover {
+  background: var(--surface-2);
+}
+
+.lists section {
+  scroll-margin-top: 48px;
+}
+
+/* One card per device, each with its own port tables */
+.device-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.device-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.device-card header {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.device-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.device-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.device-card > .hint {
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.port-table {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.port-table th {
+  padding: 8px 12px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.port-table td {
+  padding: 4px 12px;
+}
+
+.port-cell {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cable-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tr.unused td {
+  color: var(--muted);
+}
+
+/* The patch list, one table per device */
+table.grouped {
+  table-layout: fixed;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+table.grouped .group-title th {
+  background: var(--surface-2);
+  font-size: 0.95rem;
+}
+
+.cable-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cable-tag .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
